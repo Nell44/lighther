@@ -3,3 +3,13 @@
 
   console.log("Firebase OK :", auth, db);
 </script>
+
+<script type="module">
+  import { calculerSS, getCouleur } from "./score.js";
+
+  console.log("TEST SCORE JS");
+
+  console.log("Test 1 :", calculerSS(8, 7, 9, 6), getCouleur(calculerSS(8, 7, 9, 6)));
+  console.log("Test 2 :", calculerSS(5, 5, 5, 5), getCouleur(calculerSS(5, 5, 5, 5)));
+  console.log("Test 3 :", calculerSS(2, 3, 1, 2), getCouleur(calculerSS(2, 3, 1, 2)));
+</script>
