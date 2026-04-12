@@ -4,22 +4,28 @@
   --orange: #F59E0B;
   --rouge: #EF4444;
   --fond: #F9FAFB;
+  --blanc: #FFFFFF;
+  --gris: #6B7280;
+  --gris-clair: #E5E7EB;
+  
 }
 
 /* BODY */
 body {
-  margin: 0;
+  margin: 0 auto;
   font-family: Arial, sans-serif;
   background-color: var(--fond);
   max-width: 430px;
-  margin: auto;
+  min-height: 100vh;
+  color: #111827;
+  
 }
 
 /* HEADER */
 header {
   text-align: center;
-  padding: 15px;
-  font-size: 20px;
+  padding: 16px 12px 8px;
+  font-size: 22px;
   font-weight: bold;
   color: var(--vert);
 }
@@ -29,10 +35,11 @@ header {
   background-color: var(--vert);
   color: white;
   border: none;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
   width: 100%;
-  font-size: 16px;
+  font-size: 15px;
+  cursor : pointer;
 }
 
 /* BOUTON SOS */
@@ -42,8 +49,12 @@ header {
   border-radius: 50%;
   background-color: var(--rouge);
   color: white;
-  font-size: 20px;
+  font-size: 24px;
   border: none;
+  cursor : pointer;
+  box-shadow: 0 0 0 18px rgba(239, 68, 68, 0.15),
+              0 0 0 36px rgba(239, 68, 68, 0.08);
+
 }
 
 /* BADGES */
@@ -51,28 +62,43 @@ header {
   background-color: var(--vert);
   color: white;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+  
 }
 
 .badge-orange {
   background-color: var(--orange);
   color: white;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+  
+
 }
 
 .badge-rouge {
   background-color: var(--rouge);
   color: white;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
 }
 
 .badge-gris {
   background-color: #9CA3AF;
   color: white;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
 }
 
 /* CARTE INFO */
@@ -81,16 +107,35 @@ header {
   padding: 15px;
   border-radius: 15px;
   margin: 10px;
+  background-color: var(--orange);
 }
 
 /* INPUTS */
-input {
+input,
+select,
+textarea {
   width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  padding: 11px 12px;
+  margin: 6px 0 12px;
+  border-radius: 10px;
+  background-color: #FCFCFC;
+   box-sizing: border-box;
+  font-size: 14px;
 }
+
+label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  display: block;
+  margin-top: 8px;
+}
+
+input[type="range"] {
+  padding: 0;
+  margin: 8px 0 16px;
+}
+
 
 /* NAVBAR */
 nav {
@@ -101,6 +146,7 @@ nav {
   background: white;
   display: flex;
   justify-content: space-around;
-  padding: 10px;
-  border-top: 1px solid #ddd;
+  padding: 10px 0;
+  border-top: 1px solid #E5E7EB;
+  box-sizing: border-box;
 }

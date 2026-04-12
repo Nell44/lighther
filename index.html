@@ -1,4 +1,15 @@
-<script type="module">
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>LightHer</title>
+
+  <!-- Lien vers ton CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <script type="module">
   import { auth, db } from "./firebase-config.js";
   import { calculerSS, getCouleur } from "./score.js";
 
@@ -9,4 +20,8 @@
   console.log("Test 1 :", calculerSS(8, 7, 9, 6), getCouleur(calculerSS(8, 7, 9, 6)));
   console.log("Test 2 :", calculerSS(5, 5, 5, 5), getCouleur(calculerSS(5, 5, 5, 5)));
   console.log("Test 3 :", calculerSS(2, 3, 1, 2), getCouleur(calculerSS(2, 3, 1, 2)));
-</script>
+  </script>
+
+</body>
+
+</html>
