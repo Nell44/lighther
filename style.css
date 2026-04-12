@@ -1,1 +1,106 @@
-<!-- vide -->
+/* VARIABLES */
+:root {
+  --vert: #1A6B3A;
+  --orange: #F59E0B;
+  --rouge: #EF4444;
+  --fond: #F9FAFB;
+}
+
+/* BODY */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: var(--fond);
+  max-width: 430px;
+  margin: auto;
+}
+
+/* HEADER */
+header {
+  text-align: center;
+  padding: 15px;
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--vert);
+}
+
+/* BOUTON PRINCIPAL */
+.btn-principal {
+  background-color: var(--vert);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  width: 100%;
+  font-size: 16px;
+}
+
+/* BOUTON SOS */
+.btn-sos {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background-color: var(--rouge);
+  color: white;
+  font-size: 20px;
+  border: none;
+}
+
+/* BADGES */
+.badge-vert {
+  background-color: var(--vert);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.badge-orange {
+  background-color: var(--orange);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.badge-rouge {
+  background-color: var(--rouge);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.badge-gris {
+  background-color: #9CA3AF;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+/* CARTE INFO */
+.carte-info {
+  background: white;
+  padding: 15px;
+  border-radius: 15px;
+  margin: 10px;
+}
+
+/* INPUTS */
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* NAVBAR */
+nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: 430px;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+  border-top: 1px solid #ddd;
+}
