@@ -1,27 +1,400 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="fr">
 <head>
-  <title>LightHer</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 
-  <!-- Lien vers ton CSS -->
-  <link rel="stylesheet" href="style.css">
+<title>LightHer · Carte</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="style.css" />
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+*,
+*::before,
+*::after{
+box-sizing:border-box;
+margin:0;
+padding:0;
+}
+
+:root{
+--pink:#D946EF;
+--pink-light:#F0ABFC;
+--pink-dark:#86198F;
+--pink-glow:rgba(217,70,239,.28);
+--bg-deep:#0D0518;
+--bg-card:#160B2E;
+--text-primary:#F5E9FF;
+--text-muted:#A78BBD;
+}
+
+html,body{
+height:100%;
+font-family:'DM Sans',sans-serif;
+background:var(--bg-deep);
+color:var(--text-primary);
+overflow-x:hidden;
+max-width:100%;
+}
+
+/* fond lumineux */
+body::before{
+content:"";
+position:fixed;
+inset:0;
+background:
+radial-gradient(ellipse 60% 40% at 50% -10%, rgba(140,20,180,.30) 0%, transparent 65%),
+radial-gradient(ellipse 40% 30% at 15% 85%, rgba(217,70,239,.10) 0%, transparent 60%);
+pointer-events:none;
+z-index:0;
+}
+
+/* étoiles */
+.stars{
+position:fixed;
+inset:0;
+pointer-events:none;
+z-index:0;
+overflow:hidden;
+}
+
+.star{
+position:absolute;
+border-radius:50%;
+background:var(--pink-light);
+animation:twinkle var(--dur,3s) ease-in-out infinite var(--delay,0s);
+}
+
+@keyframes twinkle{
+0%,100%{opacity:.04;transform:scale(1);}
+50%{opacity:.40;transform:scale(1.4);}
+}
+
+/* page */
+.page{
+position:relative;
+z-index:1;
+min-height:100dvh;
+display:flex;
+flex-direction:column;
+padding:26px 24px 120px;
+}
+
+/* header */
+.header{
+text-align:center;
+margin-bottom:34px;
+animation:fadeDown .6s ease both;
+}
+
+.brand-title{
+font-family:'Fraunces',serif;
+font-size:3.2rem;
+font-weight:300;
+letter-spacing:.03em;
+line-height:1;
+color:white;
+}
+
+.brand-title span{
+color:var(--pink);
+}
+
+.brand-sub{
+margin-top:10px;
+font-size:.72rem;
+font-weight:600;
+letter-spacing:.20em;
+text-transform:uppercase;
+color:var(--text-muted);
+}
+
+/* carte container */
+.map-card{
+width:80%;
+max-width:1380px;
+margin:0 auto;
+background:var(--bg-card);
+border:1px solid rgba(217,70,239,.25);
+border-radius:30px;
+padding:18px;
+box-shadow:
+0 24px 60px rgba(0,0,0,.55),
+0 0 50px rgba(140,20,180,.12);
+animation:fadeUp .6s ease .1s both;
+}
+
+/* carte responsive */
+#carte{
+width:100%;
+height:clamp(460px, 60vh, 680px);
+border-radius:22px;
+overflow:hidden;
+}
+
+/* bouton + */
+.plus{
+position:fixed;
+right:32px;
+bottom:120px;
+width:72px;
+height:72px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+text-decoration:none;
+font-size:44px;
+font-weight:700;
+background:#D946EF;
+color:white;
+box-shadow:
+0 10px 24px rgba(0,0,0,.28),
+0 0 0 12px rgba(217,70,239,.16);
+z-index:20;
+transition:.2s;
+}
+
+
+.plus:hover{
+transform:scale(1.06);
+
+}
+
+/* nav */
+nav{
+position:fixed;
+left:50%;
+bottom:18px;
+transform:translateX(-50%);
+display:flex;
+gap:16px;
+justify-content:center;
+align-items:center;
+background:transparent;
+border:none;
+padding:0;
+z-index:30;
+}
+
+nav a{
+text-decoration:none;
+font-size:1rem;
+font-weight:500;
+color:#111111;;
+background:#D946EF;;
+padding:16px 26px;
+border-radius:12px;
+min-width:110px;
+text-align:center;
+box-shadow:0 8px 24px rgba(217,70,239,.35);
+transition:.2s;
+}
+
+nav a:hover{
+transform:translateY(-2px);
+background:#db70eb;
+color:#111111;
+}
+
+/* mobile */
+@media (max-width:768px){
+
+.page{
+padding:20px 14px 155px;
+}
+
+.header{
+margin-bottom:22px;
+}
+
+.brand-title{
+font-size:2.2rem;
+}
+
+.brand-sub{
+font-size:.62rem;
+}
+
+.map-card{
+padding:10px;
+border-radius:22px;
+}
+
+#carte{
+height:clamp(390px, 56vh, 560px);
+border-radius:16px;
+}
+
+.plus{
+width:58px;
+height:58px;
+font-size:34px;
+right:16px;
+bottom:112px;
+}
+
+nav{
+width:94%;
+gap:8px;
+flex-wrap:wrap;
+bottom:12px;
+}
+
+nav a{
+font-size:.82rem;
+padding:12px 10px;
+min-width:auto;
+flex:1 1 30%;
+}
+}
+
+/* anim */
+@keyframes fadeDown{
+from{opacity:0;transform:translateY(-16px)}
+to{opacity:1;transform:translateY(0)}
+}
+
+@keyframes fadeUp{
+from{opacity:0;transform:translateY(20px)}
+to{opacity:1;transform:translateY(0)}
+}
+</style>
+
 </head>
 
 <body>
-  <script type="module">
-  import { auth, db } from "./firebase-config.js";
-  import { calculerSS, getCouleur } from "./score.js";
 
-  console.log("Firebase OK :", auth, db);
+<div class="stars" id="stars"></div>
 
-  console.log("TEST SCORE JS");
+<main class="page">
 
-  console.log("Test 1 :", calculerSS(8, 7, 9, 6), getCouleur(calculerSS(8, 7, 9, 6)));
-  console.log("Test 2 :", calculerSS(5, 5, 5, 5), getCouleur(calculerSS(5, 5, 5, 5)));
-  console.log("Test 3 :", calculerSS(2, 3, 1, 2), getCouleur(calculerSS(2, 3, 1, 2)));
-  </script>
+<header class="header">
+<h1 class="brand-title">Light<span>Her</span></h1>
+<p class="brand-sub">Ta sécurité, la nuit</p>
+</header>
+
+<section class="map-card">
+<div id="carte"></div>
+</section>
+
+<a href="signalement.html" class="plus">+</a>
+
+<nav>
+<a href="index.html">Carte</a>
+<a href="signalement.html">Signaler</a>
+<a href="itineraire.html">Itinéraire</a>
+<a href="sos.html">SOS</a>
+<a href="auth.html">Profil</a>
+</nav>
+
+</main>
+
+<script type="module">
+
+import { db } from './firebase-config.js';
+import { getCouleur } from './score.js';
+
+import { collection, onSnapshot }
+from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+/* étoiles */
+const starsEl = document.getElementById('stars');
+
+for(let i=0;i<30;i++){
+const s = document.createElement('div');
+s.className = 'star';
+
+const size = Math.random()*2.5 + 1;
+
+s.style.cssText =
+`left:${Math.random()*100}%;
+top:${Math.random()*100}%;
+width:${size}px;
+height:${size}px;
+--dur:${(Math.random()*3+2).toFixed(1)}s;
+--delay:${(Math.random()*4).toFixed(1)}s;`;
+
+starsEl.appendChild(s);
+}
+
+/* carte */
+const carte = L.map('carte').setView([48.8566,2.3522],13);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+).addTo(carte);
+
+/* signalements firebase */
+onSnapshot(collection(db,'signalements'), (snap)=>{
+
+snap.forEach(doc => {
+
+const d = doc.data();
+
+const { couleur,label } = getCouleur(d.ss);
+
+L.circleMarker([d.lat,d.lng],{
+color:couleur,
+fillColor:couleur,
+fillOpacity:1,
+radius:25,//comment faire que c'est automatique en fonction de la localisation j'
+weight:3
+})
+.addTo(carte)
+.bindPopup(
+'SS : ' + d.ss + '/10 - ' + label
+);
+
+});
+
+}, (error)=>{
+
+console.log("Erreur Firebase :", error);
+
+});
+
+/* géolocalisation */
+navigator.geolocation.getCurrentPosition(pos => {
+
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
+
+carte.setView([lat,lng],14);
+
+L.circleMarker([lat,lng],{
+color:'#D946EF',
+fillColor:'#D946EF',
+fillOpacity:.95,
+radius:9
+})
+.addTo(carte)
+.bindPopup("Vous êtes ici");
+
+}, ()=>{
+
+console.log("Géolocalisation refusée");
+
+});
+
+/* refresh leaflet responsive */
+setTimeout(()=>{
+carte.invalidateSize();
+},400);
+
+window.addEventListener('resize', ()=>{
+carte.invalidateSize();
+});
+
+</script>
 
 </body>
-
 </html>

@@ -29,3 +29,7 @@ const db = getFirestore(app);
 
 //  Export
 export { auth, db };
+
+
+//verifie que ça marche :
+console.log("Firebase connecté :", firebaseConfig.projectId);
