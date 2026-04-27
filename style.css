@@ -1,48 +1,93 @@
-/* VARIABLES */
+/* =========================================
+   LightHER - Thème Global (Sombre / Rose)
+========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap');
+
+*, *::before, *::after { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
+
 :root {
-  --vert: #1A6B3A;
-  --orange: #F59E0B;
-  --rouge: #EF4444;
-  --fond: #F9FAFB;
-  --blanc: #FFFFFF;
-  --gris: #6B7280;
-  --gris-clair: #E5E7EB;
+  /* Couleurs Thème Sombre (Binta) */
+  --pink:        #D946EF;
+  --pink-light:  #F0ABFC;
+  --pink-dark:   #86198F;
+  --pink-glow:   rgba(217, 70, 239, 0.22);
+  --bg-deep:     #0D0518;
+  --bg-card:     #160B2E;
+  --bg-input:    #1E1040;
+  --text-primary:#F5E9FF;
+  --text-muted:  #A78BBD;
+  --text-ph:     #6B4F85;
+  --border:      rgba(217,70,239,0.18);
   
-}
-
-/* BODY */
-body {
-  margin: 0 auto;
-  font-family: Arial, sans-serif;
-  background-color: var(--fond);
-  max-width: 430px;
-  min-height: 100vh;
-  color: #111827;
+  /* Couleurs Sécurité (Sélène/Score) */
+  --vert:   #22c55e;
+  --orange: #f59e0b;
+  --rouge:  #ef4444;
+  --gris:   #9CA3AF;
   
+  /* Arrondis */
+  --radius-card: 24px;
+  --radius-input: 14px;
+  --radius-btn:  14px;
 }
 
-/* HEADER */
-header {
-  text-align: center;
-  padding: 16px 12px 8px;
-  font-size: 22px;
-  font-weight: bold;
-  color: var(--vert);
+html, body {
+  height: 100%;
+  background-color: var(--bg-deep);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-primary);
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
-/* BOUTON PRINCIPAL */
+/* Fond lumineux global */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(140,20,180,0.30) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 30% at 15% 85%,  rgba(217,70,239,0.10) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* =========================================
+   COMPOSANTS PARTAGÉS
+========================================= */
+
+/* BOUTON PRINCIPAL (Adapté au nouveau thème) */
 .btn-principal {
-  background-color: var(--vert);
-  color: white;
-  border: none;
-  padding: 12px 16px;
-  border-radius: 12px;
   width: 100%;
-  font-size: 15px;
-  cursor : pointer;
+  background: var(--pink);
+  border: none; 
+  border-radius: var(--radius-btn);
+  padding: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .95rem; 
+  font-weight: 500;
+  color: #1a003d; 
+  cursor: pointer;
+  letter-spacing: .03em;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
 }
 
-/* BOUTON SOS */
+.btn-principal:hover {
+  background: var(--pink-light);
+  box-shadow: 0 6px 24px rgba(217,70,239,.40);
+}
+
+.btn-principal:active { transform: scale(.98); }
+
+/* BOUTON SOS (Reste Rouge pour l'urgence) */
 .btn-sos {
   width: 120px;
   height: 120px;
@@ -50,103 +95,109 @@ header {
   background-color: var(--rouge);
   color: white;
   font-size: 24px;
+  font-family: 'DM Sans', sans-serif;
   border: none;
-  cursor : pointer;
+  cursor: pointer;
   box-shadow: 0 0 0 18px rgba(239, 68, 68, 0.15),
               0 0 0 36px rgba(239, 68, 68, 0.08);
-
+  transition: transform 0.2s;
 }
+.btn-sos:active { transform: scale(0.95); }
 
-/* BADGES */
-.badge-vert {
-  background-color: var(--vert);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-block;
-  
-}
-
-.badge-orange {
-  background-color: var(--orange);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-block;
-  
-
-}
-
-.badge-rouge {
-  background-color: var(--rouge);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.badge-gris {
-  background-color: #9CA3AF;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-block;
-}
-
-/* CARTE INFO */
-.carte-info {
-  background: white;
-  padding: 15px;
-  border-radius: 15px;
-  margin: 10px;
-  background-color: var(--orange);
-}
-
-/* INPUTS */
-input,
-select,
-textarea {
+/* INPUTS & FORMULAIRES */
+input, select, textarea {
   width: 100%;
-  padding: 11px 12px;
-  margin: 6px 0 12px;
-  border-radius: 10px;
-  background-color: #FCFCFC;
-   box-sizing: border-box;
-  font-size: 14px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-input);
+  padding: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .95rem; 
+  color: var(--text-primary);
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+input::placeholder, textarea::placeholder { color: var(--text-ph); }
+input:focus, textarea:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px var(--pink-glow);
 }
 
 label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
   display: block;
-  margin-top: 8px;
+  font-size: .72rem; 
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: .07em; 
+  text-transform: uppercase;
+  margin-bottom: 8px;
 }
 
 input[type="range"] {
   padding: 0;
-  margin: 8px 0 16px;
+  background: transparent;
+  border: none;
 }
 
+/* CARTE INFO (Panneaux) */
+.carte-info {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.3);
+  color: var(--text-primary);
+  position: relative;
+  z-index: 1;
+}
 
-/* NAVBAR */
+/* BADGES DE SÉCURITÉ */
+.badge-vert, .badge-orange, .badge-rouge, .badge-gris {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+  color: white;
+}
+.badge-vert { background-color: var(--vert); }
+.badge-orange { background-color: var(--orange); }
+.badge-rouge { background-color: var(--rouge); }
+.badge-gris { background-color: var(--gris); }
+
+/* NAVBAR (Adaptée de l'index de Victor) */
 nav {
   position: fixed;
-  bottom: 0;
-  width: 100%;
-  max-width: 430px;
-  background: white;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
   display: flex;
-  justify-content: space-around;
-  padding: 10px 0;
-  border-top: 1px solid #E5E7EB;
-  box-sizing: border-box;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  z-index: 30;
+  width: 94%;
+  flex-wrap: wrap;
+}
+
+nav a {
+  text-decoration: none;
+  font-size: .82rem;
+  font-weight: 500;
+  color: #111111;
+  background: var(--pink);
+  padding: 12px 10px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(217,70,239,.35);
+  transition: .2s;
+  flex: 1 1 30%;
+}
+
+nav a:hover {
+  transform: translateY(-2px);
+  background: var(--pink-light);
 }
