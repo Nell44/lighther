@@ -342,11 +342,11 @@ const d = doc.data();
 
 const { couleur,label } = getCouleur(d.ss);
 
-L.circleMarker([d.lat,d.lng],{
+L.circle([d.lat,d.lng],{
 color:couleur,
 fillColor:couleur,
 fillOpacity:1,
-radius:25,//comment faire que c'est automatique en fonction de la localisation j'
+radius:150,
 weight:3
 })
 .addTo(carte)
@@ -370,7 +370,7 @@ const lng = pos.coords.longitude;
 
 carte.setView([lat,lng],14);
 
-L.circleMarker([lat,lng],{
+L.circle([lat,lng],{
 color:'#D946EF',
 fillColor:'#D946EF',
 fillOpacity:.95,
