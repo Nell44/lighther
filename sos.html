@@ -99,7 +99,7 @@
           reject("GPS non supporté");
         } else {
           navigator.geolocation.getCurrentPosition(
-            (pos) => resolve(`https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`),
+            (pos) => resolve(`https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`),
             (err) => reject(err)
           );
         }
