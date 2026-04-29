@@ -1,1 +1,153 @@
-<!-- vide -->
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>LightHer · Itinéraire</title>
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+        
+        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="itineraire.css" />
+    </head>
+    <body>
+
+    <div class="page-itineraire">
+        
+        <div class="search-box">
+            <label>Où vas-tu ?</label>
+            <input type="text" id="destination" placeholder="Adresse, monument, ville..." />
+        </div>
+
+        <div id="map-itineraire"></div>
+
+        <div class="info-panel" id="info-panel" style="display: none;">
+            <div class="carte-info">
+                <div class="route-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Itinéraire Sûr</span>
+                        <span class="stat-value" id="time-safe">-- min</span>
+                    </div>
+                    <div class="stat-separator"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">Direct (Gris)</span>
+                        <span class="stat-value" id="time-direct">-- min</span>
+                    </div>
+                </div>
+                <button class="btn-principal" id="start-guidage">Lancer le guidage</button>
+            </div>
+        </div>
+
+        <nav>
+            <a href="index.html">Carte</a>
+            <a href="signalement.html">Signaler</a>
+            <a href="itineraire.html">Itinéraire</a>
+            <a href="sos.html">SOS</a>
+            <a href="auth.html">Profil</a>
+        </nav>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+    <script type="module">
+        import { db } from './firebase-config.js';
+        import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+        // Initialisation de la carte sur Paris par défaut
+        let map = L.map('map-itineraire', { zoomControl: false }).setView([48.8566, 2.3522], 13);
+        let userPos = null;
+        let routingControlDirect = null;
+        let routingControlSafe = null;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // 1. Récupérer la position GPS
+        navigator.geolocation.getCurrentPosition(pos => {
+            userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
+            map.setView(userPos, 15);
+            L.circleMarker(userPos, { color: '#D946EF', radius: 8, fillOpacity: 1 }).addTo(map).bindPopup("Moi");
+        }, () => {
+            console.error("Géolocalisation refusée");
+        });
+
+        // 2. Calcul des deux itinéraires
+        async function calculerItineraires(destLatLng) {
+            if (!userPos) return alert("Position GPS introuvable.");
+
+            // Nettoyage si une recherche a déjà été faite
+            if (routingControlDirect) map.removeControl(routingControlDirect);
+            if (routingControlSafe) map.removeControl(routingControlSafe);
+
+            // Récupération des zones dangereuses (SS < 4) depuis Firestore
+            const q = query(collection(db, "signalements"), where("ss", "<", 4));
+            const snap = await getDocs(q);
+            const zonesRisque = [];
+            snap.forEach(doc => zonesRisque.push(doc.data()));
+
+            // --- ITINÉRAIRE DIRECT (Gris) ---
+            routingControlDirect = L.Routing.control({
+                waypoints: [userPos, destLatLng],
+                lineOptions: { styles: [{ color: '#9CA3AF', opacity: 0.6, weight: 5 }] },
+                addWaypoints: false,
+                draggableWaypoints: false,
+                createMarker: () => null
+            }).addTo(map);
+
+            // --- ITINÉRAIRE SÛR (Rose avec contournement) ---
+            let safeWaypoints = [userPos];
+            
+            // Algorithme de contournement simplifié : si une zone rouge est proche, on crée une déviation
+            zonesRisque.forEach(zone => {
+                const zoneLatLng = L.latLng(zone.lat, zone.lng);
+                if (userPos.distanceTo(zoneLatLng) < 3000) { 
+                    // Ajout d'un point de déviation arbitraire pour le test
+                    safeWaypoints.push(L.latLng(zone.lat + 0.003, zone.lng + 0.003));
+                }
+            });
+            
+            safeWaypoints.push(destLatLng);
+
+            routingControlSafe = L.Routing.control({
+                waypoints: safeWaypoints,
+                lineOptions: { styles: [{ color: '#D946EF', opacity: 1, weight: 7 }] },
+                addWaypoints: false,
+                createMarker: () => null
+            }).addTo(map);
+
+            // Mise à jour de l'interface avec les temps de trajet
+            routingControlSafe.on('routesfound', (e) => {
+                const time = Math.round(e.routes[0].summary.totalTime / 60);
+                document.getElementById('time-safe').innerText = time + ' min';
+                document.getElementById('info-panel').style.display = 'block';
+            });
+
+            routingControlDirect.on('routesfound', (e) => {
+                const time = Math.round(e.routes[0].summary.totalTime / 60);
+                document.getElementById('time-direct').innerText = time + ' min';
+            });
+        }
+
+        // 3. Barre de recherche (Enter pour valider)
+        document.getElementById('destination').addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const queryAddr = e.target.value;
+                const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${queryAddr}`);
+                const data = await resp.json();
+                if (data.length > 0) {
+                    const dest = L.latLng(data[0].lat, data[0].lon);
+                    calculerItineraires(dest);
+                } else {
+                    alert("Destination non trouvée.");
+                }
+            }
+        });
+
+        document.getElementById('start-guidage').addEventListener('click', () => {
+            alert("Guidage lancé ! Suivez la ligne rose.");
+        });
+    </script>
+
+    </body>
+</html>
