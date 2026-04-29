@@ -1,1 +1,183 @@
-<!-- vide -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>LightHer · SOS</title>
+  
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Quelques styles spécifiques à l'agencement de la page SOS */
+    main {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 80vh; padding: 20px; text-align: center; gap: 30px;
+    }
+    #compte-a-rebours-container {
+      display: none; /* Caché par défaut, on l'affiche au clic */
+      flex-direction: column; align-items: center; gap: 15px;
+    }
+    .contact-section { width: 100%; max-width: 350px; }
+    #msg-save { color: var(--vert); font-size: 0.85rem; display: none; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <!-- Partie Binta pour se connecter  -->
+  <script type="module">
+    import { auth } from './firebase-config.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    onAuthStateChanged(auth, user => { if (!user) window.location.href = 'auth.html'; });
+  </script>
+
+  <main>
+    <!--  Enregistrer le numéro du proche -->
+    <div class="contact-section">
+      <label for="numero-proche">Numéro d'urgence (proche) :</label>
+      <input type="tel" id="numero-proche" placeholder="Ex: 0612345678">
+      <button id="btn-save" class="btn-principal">Sauvegarder le contact</button>
+      <div id="msg-save">Numéro sauvegardé avec succès !</div>
+    </div>
+
+    <!-- Le grand bouton rouge SOS -->
+    <button id="btn-sos" class="btn-sos">SOS</button>
+
+    <!--  Le compte à rebours et l'annulation -->
+    <div id="compte-a-rebours-container">
+      <h2 style="color: var(--rouge); font-size: 2rem;">Alerte dans <span id="compteur">5</span>s</h2>
+      <button id="btn-annuler" class="btn-principal">Annuler</button>
+    </div>
+
+    <!--Bouton secondaire "Partager ma position" -->
+    <button id="btn-partager" class="btn-principal" style="background-color: var(--orange, #f59e0b); max-width: 350px; margin-top: 20px;">
+      Partager ma position
+    </button>
+  </main>
+
+  <!-- La barre de navigation  -->
+  <nav>
+    <a href="index.html">Carte</a>
+    <a href="signalement.html">Signaler</a>
+    <a href="itineraire.html">Itinéraire</a>
+    <a href="sos.html" style="background: var(--pink-light); color: var(--bg-deep);">SOS</a>
+    <a href="auth.html">Profil</a>
+  </nav>
+
+  <script>
+    // Récuperation de tous les éléments HTML dont on a besoin
+    const inputNumero = document.getElementById('numero-proche');
+    const btnSave = document.getElementById('btn-save');
+    const msgSave = document.getElementById('msg-save');
+    const btnSos = document.getElementById('btn-sos');
+    const conteneurRebours = document.getElementById('compte-a-rebours-container');
+    const affichageCompteur = document.getElementById('compteur');
+    const btnAnnuler = document.getElementById('btn-annuler');
+    const btnPartager = document.getElementById('btn-partager'); // Il faut s'assurer que ce bouton existe dans le HTML !
+
+    let timerInterval = null;
+    let gpsLink = "[Position introuvable]";
+
+    //Gérer le localStorage pour le contact
+    window.addEventListener('DOMContentLoaded', () => {
+      // Au chargement, on remet le numéro s'il a déjà été sauvegardé
+      const numeroSauvegarde = localStorage.getItem('numeroUrgence');
+      if (numeroSauvegarde) {
+        inputNumero.value = numeroSauvegarde;
+      }
+    });
+
+    btnSave.addEventListener('click', () => {
+      // Au clic sur sauvegarder, on stocke le numéro
+      localStorage.setItem('numeroUrgence', inputNumero.value);
+      msgSave.style.display = 'block';
+      setTimeout(() => msgSave.style.display = 'none', 2000);
+    });
+
+    //  Fonction pour récupérer la position GPS
+    function recupererPosition() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject("GPS non supporté");
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve(`https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`),
+            (err) => reject(err)
+          );
+        }
+      });
+    }
+
+    // Déclenchement du SOS
+    btnSos.addEventListener('click', async () => {
+      
+      btnSos.style.display = 'none';
+      conteneurRebours.style.display = 'flex';
+      
+      let tempsRestant = 5;
+      affichageCompteur.innerText = tempsRestant;
+
+      
+      try {
+        gpsLink = await recupererPosition();
+      } catch (e) {
+        console.warn("Erreur GPS", e);
+      }
+
+      
+      timerInterval = setInterval(() => {
+        tempsRestant--;
+        affichageCompteur.innerText = tempsRestant;
+
+        if (tempsRestant <= 0) {
+          clearInterval(timerInterval);
+          lancerAlerte();
+        }
+      }, 1000);
+    });
+
+    // Annuler le SOS
+    btnAnnuler.addEventListener('click', () => {
+      clearInterval(timerInterval); // On stoppe le chrono
+      conteneurRebours.style.display = 'none'; // On cache le chrono
+      btnSos.style.display = 'block'; // On remet le bouton SOS
+    });
+
+    // Fonction finale qui ouvre les SMS
+    function lancerAlerte() {
+      // Remise à zéro de l'interface
+      conteneurRebours.style.display = 'none';
+      btnSos.style.display = 'block';
+      
+      const messageUrgence = `URGENT - Besoin aide. Ma position : ${gpsLink}`;
+      
+      
+      window.open(`sms:17?body=${encodeURIComponent(messageUrgence)}`, '_self');
+
+      
+      const numeroProche = localStorage.getItem('numeroUrgence');
+      if (numeroProche) {
+        
+        setTimeout(() => {
+          window.open(`sms:${numeroProche}?body=${encodeURIComponent(messageUrgence)}`, '_self');
+        }, 500);
+      }
+    }
+
+
+    btnPartager.addEventListener('click', async () => {
+      const numeroProche = localStorage.getItem('numeroUrgence');
+      if (!numeroProche) {
+        alert("Sauvegarde d'abord le numéro d'un proche plus haut.");
+        return;
+      }
+
+      try {
+        const lien = await recupererPosition();
+        const messagePartage = `Je partage ma position avec toi : ${lien}`;
+        window.open(`sms:${numeroProche}?body=${encodeURIComponent(messagePartage)}`, '_self');
+      } catch (error) {
+        alert("Impossible de récupérer la position GPS. Active-la sur ton téléphone.");
+      }
+    });
+  </script>
+</body>
+</html>
