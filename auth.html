@@ -472,12 +472,27 @@
               <label for="selfie-document">Selfie de vérification</label>
               <input type="file" id="selfie-document" accept="image/*" />
             </div>
+            <div class="field">
+              <label for="admin-id">Identifiant administratif simulé</label>
+              <input type="text" id="admin-id" placeholder="Ex : 3 derniers caractères seulement" maxlength="6" autocomplete="off" />
+            </div>
             <label class="checkbox-field">
               <input type="checkbox" id="verification-simulee" />
               <span class="checkbox-label">Valider la simulation de vérification d’identité.</span>
             </label>
             <div id="verification-status" class="verification-status">Statut utilisateur : non vérifiée.</div>
           </div>
+
+          <label class="checkbox-field">
+            <input type="checkbox" id="terms-checkbox" />
+            <span class="checkbox-label">
+              J’accepte les conditions d’utilisation de LightHer et comprends que ce prototype ne remplace pas les services d’urgence.
+            </span>
+          </label>
+
+          <p class="verification-note">
+            RGPD : les champs d’identité sont uniquement utilisés pour simuler le parcours de vérification. Aucun numéro administratif complet ni fichier d’identité n’est stocké dans Firestore.
+          </p>
 
           <button class="btn-submit" id="btn-register" type="button">
             <span class="btn-text">Créer mon compte</span>
@@ -603,6 +618,8 @@
       const verificationSimulee = document.getElementById('verification-simulee').checked;
       const idDocument = document.getElementById('id-document').files.length > 0;
       const selfieDocument = document.getElementById('selfie-document').files.length > 0;
+      const adminId = document.getElementById('admin-id').value.trim();
+      const termsAccepted = document.getElementById('terms-checkbox').checked;
       if (!email)        return showError('register', "Merci de saisir ton adresse e-mail.", ['register-email']);
       if (!pw)           return showError('register', "Merci de choisir un mot de passe.", ['register-password']);
       if (pw.length < 6) return showError('register', "Le mot de passe doit contenir au moins 6 caractères.", ['register-password']);
@@ -610,7 +627,9 @@
       if (!certify)      return showError('register', "Tu dois certifier être une femme pour rejoindre LightHER.");
       if (!idDocument) return showError('register', "Ajoute une pièce d’identité pour la simulation.", ['id-document']);
       if (!selfieDocument) return showError('register', "Ajoute un selfie pour la simulation.", ['selfie-document']);
+      if (!adminId) return showError('register', "Ajoute un identifiant administratif partiel pour la simulation.", ['admin-id']);
       if (!verificationSimulee) return showError('register', "Valide la vérification d’identité simulée pour ce prototype.");
+      if (!termsAccepted) return showError('register', "Tu dois accepter les conditions d’utilisation.");
       const btn = document.getElementById('btn-register');
       setLoading(btn, true);
       try {
@@ -621,6 +640,8 @@
             verificationIdentiteSimulee: true,
             verificationStatut: 'simulation_validée',
             verificationPrototype: 'Aucun fichier stocké. Simulation locale sans SDK Onfido/Yoti.',
+            verificationAdministrativeSimulee: true,
+            conditionsUtilisationAcceptees: true,
             donneesIdentiteSupprimeesApresValidation: true,
             createdAt: serverTimestamp()
           }, { merge: true });

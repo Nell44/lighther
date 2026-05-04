@@ -24,6 +24,44 @@
 
             .route-alert.visible { display: block; }
 
+            .search-help {
+                margin-top: -8px;
+                margin-bottom: 10px;
+                color: var(--text-muted);
+                font-size: .78rem;
+                line-height: 1.4;
+            }
+
+            .search-results {
+                display: none;
+                margin: -6px 0 12px;
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                overflow: hidden;
+                background: var(--bg-card);
+                position: relative;
+                z-index: 40;
+            }
+
+            .search-results.visible { display: block; }
+
+            .search-result {
+                width: 100%;
+                border: none;
+                border-bottom: 1px solid var(--border);
+                background: transparent;
+                color: var(--text-primary);
+                padding: 11px 12px;
+                text-align: left;
+                font-family: 'DM Sans', sans-serif;
+                font-size: .84rem;
+                cursor: pointer;
+            }
+
+            .search-result:last-child { border-bottom: none; }
+
+            .search-result:hover { background: rgba(217,70,239,.12); }
+
             .route-choices {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -86,6 +124,28 @@
                 cursor: pointer;
             }
 
+            .route-legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 10px;
+                color: var(--text-muted);
+                font-size: .72rem;
+            }
+
+            .route-legend span {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .route-legend i {
+                width: 16px;
+                height: 4px;
+                border-radius: 999px;
+                display: inline-block;
+            }
+
             @media (max-width: 480px) {
                 .route-choices { grid-template-columns: 1fr; }
             }
@@ -99,16 +159,22 @@
             <label>Où vas-tu ?</label>
             <input type="text" id="destination" placeholder="Adresse, monument, ville..." />
         </div>
+        <p class="search-help">Recherche une adresse, un restaurant, un commerce ou un nom d’établissement. Le trajet est une approximation piétonne pour prototype web.</p>
+        <div class="search-results" id="search-results"></div>
 
         <div id="map-itineraire"></div>
 
         <div class="info-panel" id="info-panel" style="display: none;">
             <div class="carte-info">
                 <div class="route-alert" id="route-alert"></div>
+                <div class="route-legend">
+                    <span><i style="background:#16a34a"></i>Trajet à pied sécurisé</span>
+                    <span><i style="background:#475569"></i>Trajet le plus court</span>
+                </div>
 
                 <div class="route-choices" role="group" aria-label="Choix d'itinéraire">
                     <button class="route-choice active" id="choice-safe" type="button" data-route="safe">
-                        <span class="choice-title">Itinéraire le plus sûr</span>
+                        <span class="choice-title">Trajet à pied sécurisé</span>
                         <span class="choice-meta">
                             <span><b id="time-safe">-- min</b> · <span id="distance-safe">-- km</span></span>
                             <span>SS moyen : <span id="score-safe">--/10</span></span>
@@ -117,7 +183,7 @@
                     </button>
 
                     <button class="route-choice" id="choice-direct" type="button" data-route="direct">
-                        <span class="choice-title">Itinéraire le plus court</span>
+                        <span class="choice-title">Trajet à pied le plus court</span>
                         <span class="choice-meta">
                             <span><b id="time-direct">-- min</b> · <span id="distance-direct">-- km</span></span>
                             <span>SS moyen : <span id="score-direct">--/10</span></span>
@@ -138,7 +204,7 @@
             <a href="signalement.html">Signaler</a>
             <a href="itineraire.html">Itinéraire</a>
             <a href="sos.html">SOS</a>
-            <a href="auth.html">Profil</a>
+            <a href="profil.html">Profil</a>
         </nav>
     </div>
 
@@ -168,6 +234,8 @@
         const MIN_RECENT_RISKS_FOR_DEMO = 2;
         const ROUTE_RISK_RADIUS_M = 220;
         const RECALC_TRIGGER_RADIUS_M = 200;
+        const searchResultsEl = document.getElementById('search-results');
+        let searchTimer = null;
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -178,6 +246,7 @@
             L.circleMarker(userPos, { color: '#D946EF', radius: 8, fillOpacity: 1 }).addTo(map).bindPopup("Moi");
         }, () => {
             console.error("Géolocalisation refusée");
+            showToast("Géolocalisation refusée : impossible de calculer le départ automatiquement.", 'error');
         });
 
         function getSignalementDate(d) {
@@ -392,7 +461,7 @@
 
         // 2. Calcul des deux itinéraires
         async function calculerItineraires(destLatLng, options = {}) {
-            if (!userPos) return alert("Position GPS introuvable.");
+            if (!userPos) return showToast("Position GPS introuvable. Autorise la localisation pour calculer le départ.", 'error');
             currentDestination = destLatLng;
 
             // Nettoyage si une recherche a déjà été faite
@@ -417,7 +486,7 @@
             // --- ITINÉRAIRE DIRECT (Gris) ---
             routingControlDirect = L.Routing.control({
                 waypoints: [userPos, destLatLng],
-                lineOptions: { styles: [{ color: '#9CA3AF', opacity: 0.6, weight: 5 }] },
+                lineOptions: { styles: [{ color: '#475569', opacity: 0.9, weight: 5 }] },
                 addWaypoints: false,
                 draggableWaypoints: false,
                 createMarker: () => null
@@ -428,7 +497,7 @@
 
             routingControlSafe = L.Routing.control({
                 waypoints: safePlan.waypoints,
-                lineOptions: { styles: [{ color: '#D946EF', opacity: 1, weight: 7 }] },
+                lineOptions: { styles: [{ color: '#16a34a', opacity: 1, weight: 7 }] },
                 addWaypoints: false,
                 createMarker: () => null
             }).addTo(map);
@@ -444,18 +513,68 @@
             });
         }
 
-        // 3. Barre de recherche (Enter pour valider)
-        document.getElementById('destination').addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
-                const queryAddr = encodeURIComponent(e.target.value);
-                const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${queryAddr}`);
+        function showToast(message, type = '') {
+            const toast = document.createElement('div');
+            toast.className = `app-toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('visible'));
+            setTimeout(() => {
+                toast.classList.remove('visible');
+                setTimeout(() => toast.remove(), 220);
+            }, 3200);
+        }
+
+        function renderSearchResults(results) {
+            searchResultsEl.innerHTML = '';
+            if (results.length === 0) {
+                searchResultsEl.innerHTML = '<button class="search-result" type="button">Aucun résultat trouvé. Essaie avec la ville ou le code postal.</button>';
+                searchResultsEl.classList.add('visible');
+                return;
+            }
+
+            results.forEach(item => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'search-result';
+                btn.textContent = item.display_name;
+                btn.addEventListener('click', () => {
+                    document.getElementById('destination').value = item.display_name;
+                    searchResultsEl.classList.remove('visible');
+                    calculerItineraires(L.latLng(Number(item.lat), Number(item.lon)));
+                });
+                searchResultsEl.appendChild(btn);
+            });
+            searchResultsEl.classList.add('visible');
+        }
+
+        async function rechercherDestination(value) {
+            const term = value.trim();
+            if (term.length < 3) {
+                searchResultsEl.classList.remove('visible');
+                return;
+            }
+
+            try {
+                const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&q=${encodeURIComponent(term)}`);
                 const data = await resp.json();
-                if (data.length > 0) {
-                    const dest = L.latLng(data[0].lat, data[0].lon);
-                    calculerItineraires(dest);
-                } else {
-                    alert("Destination non trouvée.");
-                }
+                renderSearchResults(data);
+                if (data.length === 0) showToast("Aucune destination trouvée.", 'error');
+            } catch (error) {
+                showToast("Recherche indisponible. Vérifie la connexion réseau.", 'error');
+            }
+        }
+
+        // 3. Barre de recherche : suggestions puis choix explicite
+        document.getElementById('destination').addEventListener('input', (e) => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => rechercherDestination(e.target.value), 450);
+        });
+
+        document.getElementById('destination').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                rechercherDestination(e.target.value);
             }
         });
 
@@ -464,13 +583,13 @@
         });
 
         document.getElementById('start-guidage').addEventListener('click', () => {
-            const label = selectedRoute === 'safe' ? 'la ligne rose' : 'la ligne grise';
-            alert(`Guidage lancé ! Suivez ${label}.`);
+            const label = selectedRoute === 'safe' ? 'la ligne verte' : 'la ligne gris foncé';
+            showToast(`Guidage prototype lancé. Suivez ${label}.`, 'success');
         });
 
         document.getElementById('simulate-incident').addEventListener('click', () => {
             if (!userPos || !currentDestination) {
-                alert("Calcule d'abord un itinéraire.");
+                showToast("Calcule d'abord un itinéraire.", 'error');
                 return;
             }
 

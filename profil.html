@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>LightHer · Profil</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .profile-page {
+      position: relative;
+      z-index: 1;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 18px 96px;
+      gap: 18px;
+    }
+
+    .profile-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 18px;
+      box-shadow: 0 18px 48px rgba(0,0,0,.38);
+    }
+
+    .profile-card h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 2rem;
+      font-weight: 300;
+      margin-bottom: 8px;
+    }
+
+    .profile-row {
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .profile-label {
+      display: block;
+      color: var(--text-muted);
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 5px;
+    }
+
+    .profile-value {
+      color: var(--text-primary);
+      font-size: .94rem;
+      overflow-wrap: anywhere;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(156,163,175,.14);
+      color: var(--text-muted);
+      font-size: .82rem;
+      font-weight: 600;
+    }
+
+    .status-pill.valid {
+      background: rgba(34,197,94,.12);
+      color: var(--vert);
+    }
+
+    .contacts-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .contact-chip {
+      padding: 10px 12px;
+      border-radius: var(--radius-input);
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <main class="profile-page">
+    <section class="profile-card">
+      <h1>Profil</h1>
+      <p class="page-hint">Retrouve ton statut prototype, tes proches de confiance et l’accès à la déconnexion.</p>
+
+      <div class="profile-row">
+        <span class="profile-label">Email</span>
+        <span class="profile-value" id="profile-email">Chargement...</span>
+      </div>
+
+      <div class="profile-row">
+        <span class="profile-label">Vérification</span>
+        <span class="status-pill" id="profile-status">Non vérifiée</span>
+        <p class="page-hint" style="margin-top:8px;">Simulation prototype : aucune pièce d’identité ni numéro sensible complet n’est stocké.</p>
+      </div>
+
+      <div class="profile-row">
+        <span class="profile-label">Proches de confiance</span>
+        <div class="contacts-list" id="profile-contacts">
+          <span class="profile-value">Aucun proche enregistré.</span>
+        </div>
+      </div>
+
+      <button class="btn-principal" id="btn-logout" type="button">Se déconnecter</button>
+    </section>
+  </main>
+
+  <nav>
+    <a href="index.html">Carte</a>
+    <a href="signalement.html">Signaler</a>
+    <a href="itineraire.html">Itinéraire</a>
+    <a href="sos.html">SOS</a>
+    <a href="profil.html" style="background: var(--pink-light); color: var(--bg-deep);">Profil</a>
+  </nav>
+
+  <script type="module">
+    import { auth, db } from './firebase-config.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    function showToast(message, type = '') {
+      const toast = document.createElement('div');
+      toast.className = `app-toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('visible'));
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 220);
+      }, 3200);
+    }
+
+    function renderContacts(contacts) {
+      const box = document.getElementById('profile-contacts');
+      box.innerHTML = '';
+      if (!contacts.length) {
+        box.innerHTML = '<span class="profile-value">Aucun proche enregistré.</span>';
+        return;
+      }
+      contacts.forEach(num => {
+        const item = document.createElement('div');
+        item.className = 'contact-chip';
+        item.textContent = num;
+        box.appendChild(item);
+      });
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = 'auth.html';
+        return;
+      }
+
+      document.getElementById('profile-email').textContent = user.email || 'Email indisponible';
+      let data = {};
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        data = snap.data() || {};
+      } catch (error) {
+        showToast('Profil Firebase indisponible, affichage local.', 'error');
+      }
+
+      const valid = data.verificationIdentiteSimulee === true;
+      const status = document.getElementById('profile-status');
+      status.textContent = valid ? 'Vérification simulée validée' : 'Non vérifiée';
+      status.classList.toggle('valid', valid);
+
+      const localContacts = JSON.parse(localStorage.getItem('contactsUrgence') || '[]');
+      renderContacts(Array.isArray(data.contactsUrgence) && data.contactsUrgence.length ? data.contactsUrgence : localContacts);
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'auth.html';
+    });
+  </script>
+</body>
+</html>

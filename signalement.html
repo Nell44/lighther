@@ -173,6 +173,7 @@
             <div class="chrono-box">
                 Objectif -30s | Temps : <span id="chrono">0</span>s
             </div>
+            <p class="page-hint">Tes notes alimentent le score de sécurité visible sur la carte collaborative.</p>
         </header>
 
         <div class="carte-info form-container">
@@ -235,7 +236,7 @@
         <a href="signalement.html" style="background: var(--pink-light); color: var(--bg-deep);">Signaler</a>
         <a href="itineraire.html">Itinéraire</a>
         <a href="sos.html">SOS</a>
-        <a href="auth.html">Profil</a>
+        <a href="profil.html">Profil</a>
     </nav>
 
     <!-- Script principal -->
@@ -269,6 +270,18 @@
         const badgeScore = document.getElementById('badge-score');
         const typeSignalementSelect = document.getElementById('type-signalement');
         const ticketMunicipalPreview = document.getElementById('ticket-municipal-preview');
+
+        function showToast(message, type = '') {
+            const toast = document.createElement('div');
+            toast.className = `app-toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('visible'));
+            setTimeout(() => {
+                toast.classList.remove('visible');
+                setTimeout(() => toast.remove(), 220);
+            }, 3200);
+        }
 
         function getTicketMunicipalSimule(typeSignalement) {
             if (typeSignalement === 'lampadaire') {
@@ -371,6 +384,7 @@
                         clearInterval(intervalChrono);
                         btn.style.display = 'none';
                         document.getElementById('message-succes').style.display = 'block';
+                        showToast('Signalement envoyé. Merci pour ta contribution.', 'success');
 
                         // Redirection vers index.html après 2 secondes
                         setTimeout(() => {
@@ -379,15 +393,15 @@
 
                     } catch (error) {
                         console.error("Erreur Firebase : ", error);
-                        alert("Erreur réseau. Impossible d'envoyer le signalement.");
+                        showToast("Erreur réseau. Impossible d'envoyer le signalement.", 'error');
                         btn.disabled = false;
                     }
                 }, (error) => {
-                    alert("Tu dois autoriser l'accès à ta position pour signaler un lieu.");
+                    showToast("Autorise l'accès à ta position pour signaler ce lieu.", 'error');
                     btn.disabled = false;
                 });
             } else {
-                alert("Ton navigateur ne gère pas la géolocalisation.");
+                showToast("Ton navigateur ne gère pas la géolocalisation.", 'error');
                 btn.disabled = false;
             }
         });

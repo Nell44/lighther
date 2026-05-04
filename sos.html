@@ -218,7 +218,7 @@
     <a href="signalement.html">Signaler</a>
     <a href="itineraire.html">Itinéraire</a>
     <a href="sos.html" style="background: var(--pink-light); color: var(--bg-deep);">SOS</a>
-    <a href="auth.html">Profil</a>
+    <a href="profil.html">Profil</a>
   </nav>
 
   <!-- Script JS Vanilla -->
@@ -262,6 +262,18 @@
     let trackingSimulationInterval = null;
 
     let contacts = JSON.parse(localStorage.getItem('contactsUrgence')) || [];
+
+    function showToast(message, type = '') {
+      const toast = document.createElement('div');
+      toast.className = `app-toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('visible'));
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 220);
+      }, 3200);
+    }
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
@@ -345,8 +357,10 @@
         await sauvegarderContacts();
         inputNumero.value = '';
         afficherContacts();
+        showToast('Contact de confiance sauvegardé.', 'success');
       } else {
         msgErreur.style.display = 'block';
+        showToast('Numéro invalide. Utilise un 06 ou 07 à 10 chiffres.', 'error');
       }
     });
 
@@ -391,14 +405,14 @@
         const msg = `Je partage ponctuellement ma position avec toi : ${lien}`;
         window.open(construireSmsUrl(numeroCible, msg), '_self');
       } catch (error) {
-        alert("Impossible de récupérer la position GPS.");
+        showToast("Impossible de récupérer la position GPS.", 'error');
       }
     };
 
     // Alerter TOUS les proches en un clic 
     btnAlerterProches.addEventListener('click', async () => {
       if (contacts.length === 0) {
-        alert("Ajoute au moins un proche de confiance.");
+        showToast("Ajoute au moins un proche de confiance.", 'error');
         return;
       }
 
@@ -407,13 +421,13 @@
         const msg = construireMessageUrgence(lien);
         window.open(construireSmsUrl(destinatairesProches(), msg), '_self');
       } catch (error) {
-        alert("Active ton GPS pour préparer le message.");
+        showToast("Active ton GPS pour préparer le message.", 'error');
       }
     });
 
     btnPartagePonctuel.addEventListener('click', async () => {
       if (contacts.length === 0) {
-        alert("Ajoute au moins un proche de confiance.");
+        showToast("Ajoute au moins un proche de confiance.", 'error');
         return;
       }
 
@@ -422,13 +436,13 @@
         const msg = `Je partage ponctuellement ma position avec toi : ${lien}`;
         window.open(construireSmsUrl(destinatairesProches(), msg), '_self');
       } catch (error) {
-        alert("Impossible de récupérer la position GPS.");
+        showToast("Impossible de récupérer la position GPS.", 'error');
       }
     });
 
     btnPartageContinu.addEventListener('click', async () => {
       if (contacts.length === 0) {
-        alert("Ajoute au moins un proche de confiance.");
+        showToast("Ajoute au moins un proche de confiance.", 'error');
         return;
       }
 
@@ -489,6 +503,7 @@
       btnSos.style.display = 'block';
       btnSos.nextElementSibling.style.display = 'block';
       sosStatus.innerHTML = '<strong>Alerte annulée</strong>Aucun SMS n’a été ouvert.';
+      showToast('SOS annulé. Aucun SMS ouvert.', 'success');
     });
 
     // Préremplissage SMS vers le 17 puis vers les proches si disponibles.

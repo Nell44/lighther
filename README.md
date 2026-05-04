@@ -28,6 +28,7 @@ Pages principales :
 - `signalement.html` : création d'un signalement
 - `itineraire.html` : itinéraire court vs itinéraire sûr
 - `sos.html` : SOS et proches de confiance
+- `profil.html` : profil, statut de vérification et déconnexion
 
 ## Fonctionnalités réelles
 
@@ -37,8 +38,10 @@ Pages principales :
 - Carte Leaflet avec couleurs vert/orange/rouge/gris
 - Popups détaillées avec score, critères, type et fraîcheur
 - Routage avec une route courte et une route sûre
+- Recherche de destination avec plusieurs résultats Nominatim possibles
 - SOS web avec SMS pré-rempli et position GPS si disponible
 - Proches de confiance sauvegardés dans Firebase avec fallback `localStorage`
+- Page profil avec email, statut prototype, proches et déconnexion
 
 ## Fonctionnalités simulées
 
@@ -60,6 +63,7 @@ Pages principales :
 7. Ouvrir `itineraire.html`, saisir une destination, comparer itinéraire sûr et court.
 8. Cliquer sur `Simuler un incident critique à moins de 200 m` pour montrer le recalcul prototype.
 9. Ouvrir `sos.html`, ajouter un proche, partager la position puis déclencher le SOS.
+10. Ouvrir `profil.html` pour montrer le statut et la déconnexion.
 
 ## Checklist de tests manuels
 
