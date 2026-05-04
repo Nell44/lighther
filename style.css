@@ -346,6 +346,7 @@ nav a:hover {
 @media (max-width: 768px) {
     .page-itineraire {
         padding: 14px 12px calc(84px + env(safe-area-inset-bottom));
+        overflow-y: auto;
     }
 
     .page-itineraire .search-box {
@@ -354,20 +355,29 @@ nav a:hover {
 
     #map-itineraire {
         min-height: 42vh;
+        height: 48vh;
         margin-bottom: 8px;
         border-radius: 16px;
+        flex: 0 0 auto;
     }
 
     .info-panel {
-        bottom: 0;
-        max-height: 38vh;
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(82px + env(safe-area-inset-bottom));
+        width: auto;
+        max-height: min(42vh, 360px);
         overflow-y: auto;
-        padding-bottom: 4px;
+        padding-bottom: 0;
+        z-index: 52;
+        animation: fadeUp 0.25s ease both;
     }
 
     .info-panel .carte-info {
         padding: 12px;
         border-radius: 18px;
+        box-shadow: 0 18px 46px rgba(0,0,0,.52);
     }
 }
 

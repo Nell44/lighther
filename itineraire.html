@@ -97,14 +97,26 @@
 
             .user-position-marker .dot {
                 position: absolute;
-                left: 9px;
-                top: 9px;
-                width: 16px;
-                height: 16px;
+                left: 7px;
+                top: 7px;
+                width: 20px;
+                height: 20px;
                 border-radius: 999px;
-                background: #38bdf8;
+                background: linear-gradient(135deg, #38bdf8, #d946ef);
                 border: 3px solid #ffffff;
                 box-shadow: 0 4px 18px rgba(56,189,248,.55);
+            }
+
+            .user-position-marker .dot::after {
+                content: '';
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 6px;
+                height: 6px;
+                transform: translate(-50%, -50%);
+                border-radius: 999px;
+                background: #ffffff;
             }
 
             @keyframes userPulse {
@@ -195,6 +207,47 @@
                 border-radius: 999px;
                 display: inline-block;
             }
+
+            .panel-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+
+            .panel-head strong {
+                color: var(--pink-light);
+                font-size: .84rem;
+            }
+
+            .panel-toggle {
+                border: 1px solid var(--border);
+                border-radius: 999px;
+                background: rgba(217,70,239,.12);
+                color: var(--pink-light);
+                font-family: 'DM Sans', sans-serif;
+                font-size: .78rem;
+                line-height: 1;
+                cursor: pointer;
+            }
+
+            .panel-close {
+                width: 32px;
+                height: 32px;
+            }
+
+            .panel-open {
+                display: none;
+                position: fixed;
+                right: 14px;
+                bottom: calc(84px + env(safe-area-inset-bottom));
+                z-index: 55;
+                padding: 10px 13px;
+                box-shadow: 0 12px 28px rgba(0,0,0,.35);
+            }
+
+            .panel-open.visible { display: inline-flex; }
 
             .guidance-summary {
                 display: none;
@@ -306,6 +359,8 @@
 
         <div id="map-itineraire"></div>
 
+        <button class="panel-toggle panel-open" id="open-route-panel" type="button">Voir les options</button>
+
         <div class="info-panel" id="info-panel" style="display: none;">
             <div class="carte-info">
                 <div class="guidance-summary" id="guidance-summary">
@@ -317,6 +372,10 @@
                 </div>
 
                 <div id="route-options">
+                    <div class="panel-head">
+                        <strong>Options de trajet</strong>
+                        <button class="panel-toggle panel-close" id="close-route-panel" type="button" aria-label="Réduire les options">×</button>
+                    </div>
                     <div class="route-alert" id="route-alert"></div>
                     <div class="route-legend">
                         <span><i style="background:#16a34a"></i>Trajet à pied sécurisé</span>
@@ -385,6 +444,7 @@
         let virtualRiskZones = [];
         let lastRouteStats = { safe: null, direct: null };
         let guidanceActive = false;
+        let panelCollapsed = false;
         const riskLayer = L.layerGroup().addTo(map);
         const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
         const MIN_RECENT_RISKS_FOR_DEMO = 2;
@@ -403,7 +463,7 @@
             L.marker(userPos, {
                 icon: L.divIcon({
                     className: '',
-                    html: '<div class="user-position-marker"><span class="pulse"></span><span class="dot"></span></div>',
+                    html: '<div class="user-position-marker" aria-label="Vous êtes ici"><span class="pulse"></span><span class="dot"></span></div>',
                     iconSize: [34, 34],
                     iconAnchor: [17, 17]
                 })
@@ -578,6 +638,7 @@
             document.querySelectorAll('.route-choice').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.route === route);
             });
+            applyRouteVisibility();
             if (guidanceActive) updateGuidanceSummary();
         }
 
@@ -622,11 +683,34 @@
 
         function setGuidanceMode(active) {
             guidanceActive = active;
+            panelCollapsed = false;
             const summary = document.getElementById('guidance-summary');
             const options = document.getElementById('route-options');
             summary.classList.toggle('visible', active);
             options.style.display = active ? 'none' : 'block';
+            document.getElementById('info-panel').style.display = 'block';
+            document.getElementById('open-route-panel').classList.remove('visible');
             if (active) updateGuidanceSummary();
+        }
+
+        function setPanelCollapsed(collapsed) {
+            panelCollapsed = collapsed;
+            if (!currentDestination) return;
+            document.getElementById('info-panel').style.display = collapsed ? 'none' : 'block';
+            document.getElementById('open-route-panel').classList.toggle('visible', collapsed);
+        }
+
+        function isControlOnMap(control) {
+            return Boolean(control && control._map);
+        }
+
+        function applyRouteVisibility() {
+            if (!routingControlDirect || !routingControlSafe) return;
+            const active = selectedRoute === 'safe' ? routingControlSafe : routingControlDirect;
+            const inactive = selectedRoute === 'safe' ? routingControlDirect : routingControlSafe;
+
+            if (isControlOnMap(inactive)) map.removeControl(inactive);
+            if (!isControlOnMap(active)) active.addTo(map);
         }
 
         function drawRiskZones(zones) {
@@ -664,6 +748,9 @@
             currentDestination = destLatLng;
             setGuidanceMode(false);
             lastRouteStats = { safe: null, direct: null };
+            panelCollapsed = false;
+            document.getElementById('open-route-panel').classList.remove('visible');
+            let routesFound = 0;
 
             // Nettoyage si une recherche a déjà été faite
             if (routingControlDirect) map.removeControl(routingControlDirect);
@@ -707,10 +794,14 @@
             routingControlSafe.on('routesfound', (e) => {
                 updateRouteStats('safe', e.routes[0], activeRiskZones, safePlan.avoided);
                 document.getElementById('info-panel').style.display = 'block';
+                routesFound += 1;
+                if (routesFound >= 2) applyRouteVisibility();
             });
 
             routingControlDirect.on('routesfound', (e) => {
                 updateRouteStats('direct', e.routes[0], activeRiskZones);
+                routesFound += 1;
+                if (routesFound >= 2) applyRouteVisibility();
             });
         }
 
@@ -862,6 +953,14 @@
         document.getElementById('edit-route').addEventListener('click', () => {
             setGuidanceMode(false);
             showToast("Options de trajet affichées.", 'success');
+        });
+
+        document.getElementById('close-route-panel').addEventListener('click', () => {
+            setPanelCollapsed(true);
+        });
+
+        document.getElementById('open-route-panel').addEventListener('click', () => {
+            setPanelCollapsed(false);
         });
 
         document.getElementById('simulate-incident').addEventListener('click', () => {

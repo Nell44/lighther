@@ -473,12 +473,15 @@
               <input type="file" id="selfie-document" accept="image/*" />
             </div>
             <div class="field">
-              <label for="admin-id">Identifiant administratif simulé</label>
-              <input type="text" id="admin-id" placeholder="Ex : 3 derniers caractères seulement" maxlength="6" autocomplete="off" />
+              <label for="admin-id">Numéro de sécurité sociale — vérification simulée</label>
+              <input type="text" id="admin-id" placeholder="15 chiffres, non stockés" inputmode="numeric" maxlength="21" autocomplete="off" />
             </div>
+            <p class="verification-note">
+              Le numéro sert uniquement à simuler une vérification locale : format NIR, clé de contrôle et public ciblé LightHer. Il n’est jamais stocké, et les données sont considérées supprimées après validation simulée.
+            </p>
             <label class="checkbox-field">
               <input type="checkbox" id="verification-simulee" />
-              <span class="checkbox-label">Valider la simulation de vérification d’identité.</span>
+              <span class="checkbox-label">Valider la simulation de vérification d’identité et du numéro de sécurité sociale.</span>
             </label>
             <div id="verification-status" class="verification-status">Statut utilisateur : non vérifiée.</div>
           </div>
@@ -486,12 +489,12 @@
           <label class="checkbox-field">
             <input type="checkbox" id="terms-checkbox" />
             <span class="checkbox-label">
-              J’accepte les conditions d’utilisation de LightHer et comprends que ce prototype ne remplace pas les services d’urgence.
+              J’accepte les conditions générales d’utilisation et la politique de confidentialité.
             </span>
           </label>
 
           <p class="verification-note">
-            RGPD : les champs d’identité sont uniquement utilisés pour simuler le parcours de vérification. Aucun numéro administratif complet ni fichier d’identité n’est stocké dans Firestore.
+            RGPD : les champs d’identité sont uniquement utilisés pour simuler le parcours de vérification. Aucun numéro de sécurité sociale complet ni fichier d’identité n’est stocké dans Firestore.
           </p>
 
           <button class="btn-submit" id="btn-register" type="button">
@@ -584,13 +587,64 @@
 
     const verificationCheckbox = document.getElementById('verification-simulee');
     const verificationStatus = document.getElementById('verification-status');
+    const adminIdInput = document.getElementById('admin-id');
+
+    function validateNirSimulation(value) {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length !== 15) {
+        return {
+          valid: false,
+          code: 'format',
+          message: "Numéro invalide pour la simulation : vérifiez les 15 chiffres."
+        };
+      }
+
+      if (digits[0] !== '2') {
+        return {
+          valid: false,
+          code: 'public',
+          message: "La vérification simulée indique que ce numéro ne correspond pas au public ciblé par LightHer."
+        };
+      }
+
+      const base = BigInt(digits.slice(0, 13));
+      const expectedKey = 97n - (base % 97n);
+      const actualKey = BigInt(digits.slice(13, 15));
+      if (expectedKey !== actualKey) {
+        return {
+          valid: false,
+          code: 'key',
+          message: "Numéro invalide pour la simulation : vérifiez les 15 chiffres."
+        };
+      }
+
+      return {
+        valid: true,
+        code: 'valid',
+        message: "Statut utilisateur : vérification simulée validée. Le numéro n’est pas stocké."
+      };
+    }
+
+    function updateVerificationStatus() {
+      const checked = verificationCheckbox.checked;
+      if (!checked) {
+        verificationStatus.textContent = "Statut utilisateur : non vérifiée.";
+        verificationStatus.classList.remove('valid');
+        return;
+      }
+
+      const result = validateNirSimulation(adminIdInput.value);
+      verificationStatus.textContent = result.valid ? result.message : result.message;
+      verificationStatus.classList.toggle('valid', result.valid);
+    }
 
     verificationCheckbox.addEventListener('change', () => {
-      const valid = verificationCheckbox.checked;
-      verificationStatus.textContent = valid
-        ? "Statut utilisateur : vérification simulée validée."
-        : "Statut utilisateur : non vérifiée.";
-      verificationStatus.classList.toggle('valid', valid);
+      updateVerificationStatus();
+    });
+
+    adminIdInput.addEventListener('input', () => {
+      adminIdInput.value = adminIdInput.value.replace(/\D/g, '').slice(0, 15);
+      if (verificationCheckbox.checked) updateVerificationStatus();
     });
 
     /* Login */
@@ -618,7 +672,7 @@
       const verificationSimulee = document.getElementById('verification-simulee').checked;
       const idDocument = document.getElementById('id-document').files.length > 0;
       const selfieDocument = document.getElementById('selfie-document').files.length > 0;
-      const adminId = document.getElementById('admin-id').value.trim();
+      const nirSimulation = validateNirSimulation(adminIdInput.value);
       const termsAccepted = document.getElementById('terms-checkbox').checked;
       if (!email)        return showError('register', "Merci de saisir ton adresse e-mail.", ['register-email']);
       if (!pw)           return showError('register', "Merci de choisir un mot de passe.", ['register-password']);
@@ -627,9 +681,10 @@
       if (!certify)      return showError('register', "Tu dois certifier être une femme pour rejoindre LightHER.");
       if (!idDocument) return showError('register', "Ajoute une pièce d’identité pour la simulation.", ['id-document']);
       if (!selfieDocument) return showError('register', "Ajoute un selfie pour la simulation.", ['selfie-document']);
-      if (!adminId) return showError('register', "Ajoute un identifiant administratif partiel pour la simulation.", ['admin-id']);
+      if (!adminIdInput.value.trim()) return showError('register', "Ajoute un numéro de sécurité sociale pour la simulation. Il ne sera pas stocké.", ['admin-id']);
+      if (!nirSimulation.valid) return showError('register', nirSimulation.message, ['admin-id']);
       if (!verificationSimulee) return showError('register', "Valide la vérification d’identité simulée pour ce prototype.");
-      if (!termsAccepted) return showError('register', "Tu dois accepter les conditions d’utilisation.");
+      if (!termsAccepted) return showError('register', "Tu dois accepter les conditions générales d’utilisation et la politique de confidentialité.");
       const btn = document.getElementById('btn-register');
       setLoading(btn, true);
       try {
@@ -639,9 +694,14 @@
             email,
             verificationIdentiteSimulee: true,
             verificationStatut: 'simulation_validée',
-            verificationPrototype: 'Aucun fichier stocké. Simulation locale sans SDK Onfido/Yoti.',
+            verificationPrototype: 'Aucun fichier ni NIR stocké. Simulation locale sans SDK Onfido/Yoti.',
             verificationAdministrativeSimulee: true,
+            verificationNirSimulee: true,
+            nirFormatValide: true,
+            nirPublicCibleValide: true,
+            verificationNirStatut: 'simulation_validée',
             conditionsUtilisationAcceptees: true,
+            politiqueConfidentialiteAcceptee: true,
             donneesIdentiteSupprimeesApresValidation: true,
             createdAt: serverTimestamp()
           }, { merge: true });
