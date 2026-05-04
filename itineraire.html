@@ -9,6 +9,87 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
         
         <link rel="stylesheet" href="style.css" />
+        <style>
+            .route-alert {
+                display: none;
+                margin-bottom: 12px;
+                padding: 10px 12px;
+                border: 1px solid rgba(239,68,68,.35);
+                border-radius: 12px;
+                background: rgba(239,68,68,.12);
+                color: #fecaca;
+                font-size: .78rem;
+                line-height: 1.4;
+            }
+
+            .route-alert.visible { display: block; }
+
+            .route-choices {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+
+            .route-choice {
+                width: 100%;
+                text-align: left;
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                padding: 12px;
+                background: var(--bg-input);
+                color: var(--text-primary);
+                cursor: pointer;
+                transition: border-color .2s, box-shadow .2s, transform .15s;
+            }
+
+            .route-choice:hover {
+                transform: translateY(-1px);
+                border-color: var(--pink);
+            }
+
+            .route-choice.active {
+                border-color: var(--pink);
+                box-shadow: 0 0 0 3px var(--pink-glow);
+            }
+
+            .choice-title {
+                display: block;
+                margin-bottom: 6px;
+                font-size: .82rem;
+                font-weight: 700;
+                color: var(--pink-light);
+            }
+
+            .choice-meta {
+                display: grid;
+                gap: 3px;
+                font-size: .74rem;
+                color: var(--text-muted);
+                line-height: 1.35;
+            }
+
+            .route-actions {
+                display: grid;
+                gap: 10px;
+            }
+
+            .btn-secondary {
+                width: 100%;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-btn);
+                padding: 13px;
+                background: transparent;
+                color: var(--pink-light);
+                font-family: 'DM Sans', sans-serif;
+                font-size: .86rem;
+                cursor: pointer;
+            }
+
+            @media (max-width: 480px) {
+                .route-choices { grid-template-columns: 1fr; }
+            }
+        </style>
     </head>
     <body>
 
@@ -23,18 +104,32 @@
 
         <div class="info-panel" id="info-panel" style="display: none;">
             <div class="carte-info">
-                <div class="route-stats">
-                    <div class="stat-item">
-                        <span class="stat-label">Itinéraire Sûr</span>
-                        <span class="stat-value" id="time-safe">-- min</span>
-                    </div>
-                    <div class="stat-separator"></div>
-                    <div class="stat-item">
-                        <span class="stat-label">Direct (Gris)</span>
-                        <span class="stat-value" id="time-direct">-- min</span>
-                    </div>
+                <div class="route-alert" id="route-alert"></div>
+
+                <div class="route-choices" role="group" aria-label="Choix d'itinéraire">
+                    <button class="route-choice active" id="choice-safe" type="button" data-route="safe">
+                        <span class="choice-title">Itinéraire le plus sûr</span>
+                        <span class="choice-meta">
+                            <span><b id="time-safe">-- min</b> · <span id="distance-safe">-- km</span></span>
+                            <span>SS moyen : <span id="score-safe">--/10</span></span>
+                            <span>Zones rouges évitées : <span id="avoided-safe">--</span></span>
+                        </span>
+                    </button>
+
+                    <button class="route-choice" id="choice-direct" type="button" data-route="direct">
+                        <span class="choice-title">Itinéraire le plus court</span>
+                        <span class="choice-meta">
+                            <span><b id="time-direct">-- min</b> · <span id="distance-direct">-- km</span></span>
+                            <span>SS moyen : <span id="score-direct">--/10</span></span>
+                            <span>Zones rouges traversées : <span id="crossed-direct">--</span></span>
+                        </span>
+                    </button>
                 </div>
-                <button class="btn-principal" id="start-guidage">Lancer le guidage</button>
+
+                <div class="route-actions">
+                    <button class="btn-principal" id="start-guidage">Lancer le guidage</button>
+                    <button class="btn-secondary" id="simulate-incident" type="button">Simuler un incident critique à moins de 200 m</button>
+                </div>
             </div>
         </div>
 
@@ -52,13 +147,22 @@
 
     <script type="module">
         import { db } from './firebase-config.js';
-        import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+        import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
         // Initialisation de la carte sur Paris par défaut
         let map = L.map('map-itineraire', { zoomControl: false }).setView([48.8566, 2.3522], 13);
         let userPos = null;
         let routingControlDirect = null;
         let routingControlSafe = null;
+        let currentDestination = null;
+        let selectedRoute = 'safe';
+        let activeRiskZones = [];
+        let virtualRiskZones = [];
+        const riskLayer = L.layerGroup().addTo(map);
+        const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+        const MIN_RECENT_RISKS_FOR_DEMO = 2;
+        const ROUTE_RISK_RADIUS_M = 220;
+        const RECALC_TRIGGER_RADIUS_M = 200;
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -71,19 +175,212 @@
             console.error("Géolocalisation refusée");
         });
 
+        function getSignalementDate(d) {
+            const raw = d.createdAt || d.timestamp;
+            if (!raw) return null;
+            if (typeof raw.toDate === 'function') return raw.toDate();
+            if (raw instanceof Date) return raw;
+            const date = new Date(raw);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        function isRecent(d) {
+            const date = getSignalementDate(d);
+            if (!date) return false;
+            return Date.now() - date.getTime() <= TWO_HOURS_MS;
+        }
+
+        function normalizeSignalement(d) {
+            const lat = Number(d.lat);
+            const lng = Number(d.lng);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+            const ss = Number(d.ss);
+            const type = d.typeSignalement || d.type || 'rue_normale';
+            return {
+                ...d,
+                lat,
+                lng,
+                ss: Number.isFinite(ss) ? ss : 5,
+                typeSignalement: type,
+                isCritical: ss < 4 || type === 'incident'
+            };
+        }
+
+        function toXY(point, origin) {
+            const lat = point.lat ?? point[0];
+            const lng = point.lng ?? point[1];
+            const avgLat = ((lat + origin.lat) / 2) * Math.PI / 180;
+            return {
+                x: (lng - origin.lng) * Math.cos(avgLat) * 111320,
+                y: (lat - origin.lat) * 110540
+            };
+        }
+
+        function fromXY(point, origin) {
+            const lat = origin.lat + point.y / 110540;
+            const avgLat = ((lat + origin.lat) / 2) * Math.PI / 180;
+            const lng = origin.lng + point.x / (Math.cos(avgLat) * 111320);
+            return L.latLng(lat, lng);
+        }
+
+        function distanceToSegment(point, start, end) {
+            const p = toXY(point, start);
+            const a = { x: 0, y: 0 };
+            const b = toXY(end, start);
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const len2 = dx * dx + dy * dy;
+            const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+            const projected = { x: a.x + t * dx, y: a.y + t * dy };
+            const distance = Math.hypot(p.x - projected.x, p.y - projected.y);
+            return { distance, t };
+        }
+
+        function distanceToRoute(point, coords) {
+            if (!coords || coords.length < 2) return Infinity;
+            let min = Infinity;
+            for (let i = 0; i < coords.length - 1; i++) {
+                const d = distanceToSegment(point, coords[i], coords[i + 1]).distance;
+                if (d < min) min = d;
+            }
+            return min;
+        }
+
+        function buildDetourPoint(zone, start, end) {
+            const zonePoint = L.latLng(zone.lat, zone.lng);
+            const base = distanceToSegment(zonePoint, start, end);
+            const projected = toXY(start, start);
+            const endXY = toXY(end, start);
+            const dx = endXY.x - projected.x;
+            const dy = endXY.y - projected.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const normal = { x: -dy / len, y: dx / len };
+            const zoneXY = toXY(zonePoint, start);
+            const side = ((zoneXY.x * normal.x + zoneXY.y * normal.y) >= 0) ? 1 : -1;
+            const routePoint = { x: dx * base.t, y: dy * base.t };
+            const offset = 380;
+            return fromXY({
+                x: routePoint.x - normal.x * side * offset,
+                y: routePoint.y - normal.y * side * offset
+            }, start);
+        }
+
+        function formatDistance(meters) {
+            if (!Number.isFinite(meters)) return '-- km';
+            return (meters / 1000).toFixed(1) + ' km';
+        }
+
+        function countZonesNearRoute(coords, zones, radius) {
+            return zones.filter(zone => distanceToRoute(L.latLng(zone.lat, zone.lng), coords) <= radius).length;
+        }
+
+        function estimateRouteSecurity(coords, zones) {
+            const crossed = countZonesNearRoute(coords, zones, ROUTE_RISK_RADIUS_M);
+            const incidentCount = zones.filter(zone =>
+                zone.typeSignalement === 'incident' &&
+                distanceToRoute(L.latLng(zone.lat, zone.lng), coords) <= ROUTE_RISK_RADIUS_M
+            ).length;
+            const score = Math.max(1, Math.min(10, 8.5 - crossed * 1.2 - incidentCount * 1.1));
+            return Math.round(score * 10) / 10;
+        }
+
+        async function getRiskZones() {
+            const snap = await getDocs(collection(db, "signalements"));
+            const allZones = [];
+            snap.forEach(doc => {
+                const zone = normalizeSignalement(doc.data());
+                if (zone?.isCritical) allZones.push(zone);
+            });
+
+            const recentZones = allZones.filter(isRecent);
+            const useRecentOnly = recentZones.length >= MIN_RECENT_RISKS_FOR_DEMO;
+            return {
+                zones: [...(useRecentOnly ? recentZones : allZones), ...virtualRiskZones],
+                useRecentOnly
+            };
+        }
+
+        function showRouteAlert(message) {
+            const alert = document.getElementById('route-alert');
+            alert.textContent = message;
+            alert.classList.add('visible');
+        }
+
+        function setSelectedRoute(route) {
+            selectedRoute = route;
+            document.querySelectorAll('.route-choice').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.route === route);
+            });
+        }
+
+        function updateRouteStats(kind, route, zones, avoidedBySafe = 0) {
+            const coords = route.coordinates || [];
+            const minutes = Math.round(route.summary.totalTime / 60);
+            const meters = route.summary.totalDistance;
+            const crossed = countZonesNearRoute(coords, zones, ROUTE_RISK_RADIUS_M);
+            const score = estimateRouteSecurity(coords, zones);
+
+            document.getElementById(`time-${kind}`).innerText = minutes + ' min';
+            document.getElementById(`distance-${kind}`).innerText = formatDistance(meters);
+            document.getElementById(`score-${kind}`).innerText = score + '/10';
+
+            if (kind === 'safe') {
+                document.getElementById('avoided-safe').innerText = Math.max(0, avoidedBySafe);
+            } else {
+                document.getElementById('crossed-direct').innerText = crossed;
+            }
+        }
+
+        function drawRiskZones(zones) {
+            riskLayer.clearLayers();
+            zones.forEach(zone => {
+                L.circle([zone.lat, zone.lng], {
+                    color: '#ef4444',
+                    fillColor: '#ef4444',
+                    fillOpacity: .18,
+                    radius: RECALC_TRIGGER_RADIUS_M,
+                    weight: 2
+                }).addTo(riskLayer).bindPopup(
+                    `Zone critique · SS ${zone.ss}/10 · ${zone.typeSignalement === 'incident' ? 'Incident / danger' : 'À éviter'}`
+                );
+            });
+        }
+
+        function buildSafeWaypoints(start, dest, zones) {
+            const candidates = zones
+                .map(zone => ({ zone, ...distanceToSegment(L.latLng(zone.lat, zone.lng), start, dest) }))
+                .filter(item => item.distance <= ROUTE_RISK_RADIUS_M * 1.8)
+                .sort((a, b) => a.t - b.t)
+                .slice(0, 4);
+
+            const detours = candidates.map(item => buildDetourPoint(item.zone, start, dest));
+            return {
+                waypoints: [start, ...detours, dest],
+                avoided: candidates.length
+            };
+        }
+
         // 2. Calcul des deux itinéraires
-        async function calculerItineraires(destLatLng) {
+        async function calculerItineraires(destLatLng, options = {}) {
             if (!userPos) return alert("Position GPS introuvable.");
+            currentDestination = destLatLng;
 
             // Nettoyage si une recherche a déjà été faite
             if (routingControlDirect) map.removeControl(routingControlDirect);
             if (routingControlSafe) map.removeControl(routingControlSafe);
 
-            // Récupération des zones dangereuses (SS < 4) depuis Firestore
-            const q = query(collection(db, "signalements"), where("ss", "<", 4));
-            const snap = await getDocs(q);
-            const zonesRisque = [];
-            snap.forEach(doc => zonesRisque.push(doc.data()));
+            // Récupération des zones rouges / incidents, avec filtre 2h et fallback démo
+            const riskResult = await getRiskZones();
+            activeRiskZones = riskResult.zones;
+            drawRiskZones(activeRiskZones);
+
+            if (options.reason === 'simulation') {
+                showRouteAlert("Simulation prototype : incident critique détecté à moins de 200 m. L'itinéraire sûr est recalculé automatiquement.");
+            } else {
+                showRouteAlert(riskResult.useRecentOnly
+                    ? "Routage basé sur les signalements critiques des 2 dernières heures."
+                    : "Mode démo : données anciennes incluses car il y a trop peu de signalements critiques récents.");
+            }
 
             // --- ITINÉRAIRE DIRECT (Gris) ---
             routingControlDirect = L.Routing.control({
@@ -94,22 +391,11 @@
                 createMarker: () => null
             }).addTo(map);
 
-            // --- ITINÉRAIRE SÛR (Rose avec contournement) ---
-            let safeWaypoints = [userPos];
-            
-            // Algorithme de contournement simplifié : si une zone rouge est proche, on crée une déviation
-            zonesRisque.forEach(zone => {
-                const zoneLatLng = L.latLng(zone.lat, zone.lng);
-                if (userPos.distanceTo(zoneLatLng) < 3000) { 
-                    // Ajout d'un point de déviation arbitraire pour le test
-                    safeWaypoints.push(L.latLng(zone.lat + 0.003, zone.lng + 0.003));
-                }
-            });
-            
-            safeWaypoints.push(destLatLng);
+            // --- ITINÉRAIRE SÛR (Rose avec contournement des zones critiques proches du trajet) ---
+            const safePlan = buildSafeWaypoints(userPos, destLatLng, activeRiskZones);
 
             routingControlSafe = L.Routing.control({
-                waypoints: safeWaypoints,
+                waypoints: safePlan.waypoints,
                 lineOptions: { styles: [{ color: '#D946EF', opacity: 1, weight: 7 }] },
                 addWaypoints: false,
                 createMarker: () => null
@@ -117,14 +403,12 @@
 
             // Mise à jour de l'interface avec les temps de trajet
             routingControlSafe.on('routesfound', (e) => {
-                const time = Math.round(e.routes[0].summary.totalTime / 60);
-                document.getElementById('time-safe').innerText = time + ' min';
+                updateRouteStats('safe', e.routes[0], activeRiskZones, safePlan.avoided);
                 document.getElementById('info-panel').style.display = 'block';
             });
 
             routingControlDirect.on('routesfound', (e) => {
-                const time = Math.round(e.routes[0].summary.totalTime / 60);
-                document.getElementById('time-direct').innerText = time + ' min';
+                updateRouteStats('direct', e.routes[0], activeRiskZones);
             });
         }
 
@@ -143,8 +427,36 @@
             }
         });
 
+        document.querySelectorAll('.route-choice').forEach(btn => {
+            btn.addEventListener('click', () => setSelectedRoute(btn.dataset.route));
+        });
+
         document.getElementById('start-guidage').addEventListener('click', () => {
-            alert("Guidage lancé ! Suivez la ligne rose.");
+            const label = selectedRoute === 'safe' ? 'la ligne rose' : 'la ligne grise';
+            alert(`Guidage lancé ! Suivez ${label}.`);
+        });
+
+        document.getElementById('simulate-incident').addEventListener('click', () => {
+            if (!userPos || !currentDestination) {
+                alert("Calcule d'abord un itinéraire.");
+                return;
+            }
+
+            const midpoint = L.latLng(
+                (userPos.lat + currentDestination.lat) / 2,
+                (userPos.lng + currentDestination.lng) / 2
+            );
+
+            virtualRiskZones = [{
+                lat: midpoint.lat,
+                lng: midpoint.lng,
+                ss: 1,
+                typeSignalement: 'incident',
+                isCritical: true,
+                timestamp: new Date()
+            }];
+
+            calculerItineraires(currentDestination, { reason: 'simulation' });
         });
     </script>
 
