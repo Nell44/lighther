@@ -34,6 +34,45 @@
 
     #compte-a-rebours-container {
       display: none; flex-direction: column; align-items: center; gap: 15px;
+      width: 100%;
+      max-width: 350px;
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: var(--radius-card);
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .sos-status {
+      width: 100%;
+      max-width: 350px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 14px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.24);
+    }
+
+    .sos-status strong {
+      display: block;
+      color: var(--pink-light);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .sos-message-preview {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--radius-input);
+      background: var(--bg-input);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      text-align: left;
+      border: 1px solid var(--border);
     }
 
     /* Bulle des contacts d'urgence */
@@ -48,6 +87,13 @@
     }
     .carte-contacts h3 {
       font-size: 1rem; color: var(--pink-light); margin-bottom: 15px; font-weight: 500;
+    }
+
+    .contact-help {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      margin: -6px 0 14px;
     }
     
     .liste-contacts {
@@ -77,6 +123,38 @@
       color: #111;
       margin-top: 15px;
     }
+
+    .sos-actions {
+      width: 100%;
+      max-width: 350px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .btn-secondaire {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-btn);
+      padding: 13px;
+      background: transparent;
+      color: var(--pink-light);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .86rem;
+      cursor: pointer;
+    }
+
+    .tracking-simule {
+      display: none;
+      width: 100%;
+      max-width: 350px;
+      padding: 12px;
+      border-radius: var(--radius-card);
+      background: rgba(34,197,94,0.10);
+      border: 1px solid rgba(34,197,94,0.35);
+      color: var(--vert);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
   </style>
 </head>
 <body>
@@ -84,18 +162,12 @@
   <!-- Animation du fond étoilé  -->
   <div class="stars" id="stars" aria-hidden="true"></div>
 
-  <!-- Verification compte -->
-  <script type="module">
-    import { auth } from './firebase-config.js';
-    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    onAuthStateChanged(auth, user => { if (!user) window.location.href = 'auth.html'; });
-  </script>
-
   <main class="page-sos">
       
     <!-- Bulle pour sauvegarder les numéros de proches (Max 3) -->
     <div class="carte-contacts">
-      <h3>Mes urgences (Max 3)</h3>
+      <h3>Proches de confiance (Max 3)</h3>
+      <p class="contact-help">Sauvegarde Firebase si tu es connectée, avec secours local sur ce navigateur.</p>
       
       <div id="liste-contacts" class="liste-contacts"></div>
 
@@ -108,18 +180,34 @@
       
       <!-- Bouton pour alerter UNIQUEMENT les proches -->
       <button id="btn-alerter-proches" class="btn-principal btn-alerte-groupe" style="display: none;">
-        Alerter mes proches
+        Préremplir un SMS à mes proches
       </button>
+    </div>
+
+    <div class="sos-status" id="sos-status">
+      <strong>SOS prototype web</strong>
+      1 clic prépare l’alerte. Le navigateur ouvre ensuite ton application SMS avec le message pré-rempli : tu gardes la main pour envoyer.
     </div>
 
     <!-- Le grand bouton rouge SOS centré  -->
     <button id="btn-sos" class="btn-sos">SOS</button>
-    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -15px;">Appel direct au 17</p>
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -15px;">Action 1 : SOS · Action 2 : envoyer le SMS pré-rempli</p>
 
     <!-- Le compte à rebours de 5 secondes et bouton Annuler  -->
     <div id="compte-a-rebours-container">
       <h2 style="color: var(--rouge); font-size: 2rem;">Alerte dans <span id="compteur">5</span>s</h2>
+      <p id="etat-urgence" style="color: var(--text-muted); font-size: 0.86rem;">Récupération de ta position GPS...</p>
+      <div class="sos-message-preview" id="message-preview">Message en préparation...</div>
       <button id="btn-annuler" class="btn-principal">Annuler</button>
+    </div>
+
+    <div class="sos-actions">
+      <button id="btn-partage-ponctuel" class="btn-principal" type="button">Partager ma position maintenant</button>
+      <button id="btn-partage-continu" class="btn-secondaire" type="button">Simuler le partage continu</button>
+    </div>
+
+    <div class="tracking-simule" id="tracking-simule">
+      Partage continu simulé : dans l’application mobile, la position serait actualisée jusqu’à l’arrivée ou l’arrêt manuel.
     </div>
 
   </main>
@@ -134,7 +222,11 @@
   </nav>
 
   <!-- Script JS Vanilla -->
-  <script>
+  <script type="module">
+    import { auth, db } from './firebase-config.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
     // --- 1. GÉNÉRATION DES ÉTOILES ---
     const starsEl = document.getElementById('stars');
     for (let i = 0; i < 30; i++) {
@@ -157,11 +249,66 @@
     const conteneurRebours = document.getElementById('compte-a-rebours-container');
     const affichageCompteur = document.getElementById('compteur');
     const btnAnnuler = document.getElementById('btn-annuler');
+    const etatUrgence = document.getElementById('etat-urgence');
+    const messagePreview = document.getElementById('message-preview');
+    const btnPartagePonctuel = document.getElementById('btn-partage-ponctuel');
+    const btnPartageContinu = document.getElementById('btn-partage-continu');
+    const trackingSimule = document.getElementById('tracking-simule');
+    const sosStatus = document.getElementById('sos-status');
 
     let timerInterval = null;
     let gpsLink = "[Position introuvable]";
+    let currentUser = null;
+    let trackingSimulationInterval = null;
 
     let contacts = JSON.parse(localStorage.getItem('contactsUrgence')) || [];
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = 'auth.html';
+        return;
+      }
+
+      currentUser = user;
+      await chargerContacts();
+      afficherContacts();
+    });
+
+    function nettoyerContacts(liste) {
+      return Array.isArray(liste)
+        ? liste.filter(num => /^0[67][0-9]{8}$/.test(String(num))).slice(0, 3)
+        : [];
+    }
+
+    async function chargerContacts() {
+      contacts = nettoyerContacts(JSON.parse(localStorage.getItem('contactsUrgence')) || []);
+
+      try {
+        const snap = await getDoc(doc(db, 'users', currentUser.uid));
+        const firebaseContacts = nettoyerContacts(snap.data()?.contactsUrgence);
+        if (firebaseContacts.length > 0) {
+          contacts = firebaseContacts;
+          localStorage.setItem('contactsUrgence', JSON.stringify(contacts));
+        }
+      } catch (error) {
+        console.warn("Contacts Firebase indisponibles, fallback localStorage utilisé.", error);
+      }
+    }
+
+    async function sauvegarderContacts() {
+      contacts = nettoyerContacts(contacts);
+      localStorage.setItem('contactsUrgence', JSON.stringify(contacts));
+
+      if (!currentUser) return;
+
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          contactsUrgence: contacts
+        }, { merge: true });
+      } catch (error) {
+        console.warn("Sauvegarde Firebase impossible, contact conservé en local.", error);
+      }
+    }
 
     function afficherContacts() {
       listeContactsDiv.innerHTML = '';
@@ -173,7 +320,7 @@
           <span>${num}</span>
           <div class="contact-actions">
             <button onclick="partagerIndividuel(${index})" class="btn-icon" title="Partager ma position">📍</button>
-            <button onclick="supprimerContact(${index})" class="btn-icon" title="Supprimer">❌</button>
+            <button onclick="supprimerContact(${index})" class="btn-icon" title="Supprimer">×</button>
           </div>
         `;
         listeContactsDiv.appendChild(div);
@@ -188,14 +335,14 @@
       btnAlerterProches.style.display = contacts.length > 0 ? 'flex' : 'none';
     }
 
-    btnSave.addEventListener('click', () => {
+    btnSave.addEventListener('click', async () => {
       const numeroVal = inputNumero.value.replace(/\s/g, ''); 
       const regexTel = /^0[67][0-9]{8}$/; 
 
       if (regexTel.test(numeroVal)) {
         msgErreur.style.display = 'none';
-        contacts.push(numeroVal);
-        localStorage.setItem('contactsUrgence', JSON.stringify(contacts));
+        if (!contacts.includes(numeroVal)) contacts.push(numeroVal);
+        await sauvegarderContacts();
         inputNumero.value = '';
         afficherContacts();
       } else {
@@ -203,9 +350,9 @@
       }
     });
 
-    window.supprimerContact = function(index) {
+    window.supprimerContact = async function(index) {
       contacts.splice(index, 1);
-      localStorage.setItem('contactsUrgence', JSON.stringify(contacts));
+      await sauvegarderContacts();
       afficherContacts();
     };
 
@@ -224,13 +371,25 @@
       });
     }
 
+    function construireMessageUrgence(lien) {
+      return `URGENT - J'ai besoin d'aide. Ma position actuelle : ${lien}. Message pré-rempli par LightHer.`;
+    }
+
+    function construireSmsUrl(destinataires, message) {
+      return `sms:${destinataires}?body=${encodeURIComponent(message)}`;
+    }
+
+    function destinatairesProches() {
+      return contacts.join(',');
+    }
+
     // Partager la position à UN SEUL contact 
     window.partagerIndividuel = async function(index) {
       const numeroCible = contacts[index];
       try {
         const lien = await recupererPosition();
-        const msg = `Je partage ma position avec toi : ${lien}`;
-        window.open(`sms:${numeroCible}?body=${encodeURIComponent(msg)}`, '_self');
+        const msg = `Je partage ponctuellement ma position avec toi : ${lien}`;
+        window.open(construireSmsUrl(numeroCible, msg), '_self');
       } catch (error) {
         alert("Impossible de récupérer la position GPS.");
       }
@@ -238,14 +397,57 @@
 
     // Alerter TOUS les proches en un clic 
     btnAlerterProches.addEventListener('click', async () => {
+      if (contacts.length === 0) {
+        alert("Ajoute au moins un proche de confiance.");
+        return;
+      }
+
       try {
         const lien = await recupererPosition();
-        const msg = `URGENT - Je suis en danger. Ma position : ${lien}`;
-        const tousLesProches = contacts.join(',');
-        window.open(`sms:${tousLesProches}?body=${encodeURIComponent(msg)}`, '_self');
+        const msg = construireMessageUrgence(lien);
+        window.open(construireSmsUrl(destinatairesProches(), msg), '_self');
       } catch (error) {
-        alert("Activez votre GPS.");
+        alert("Active ton GPS pour préparer le message.");
       }
+    });
+
+    btnPartagePonctuel.addEventListener('click', async () => {
+      if (contacts.length === 0) {
+        alert("Ajoute au moins un proche de confiance.");
+        return;
+      }
+
+      try {
+        const lien = await recupererPosition();
+        const msg = `Je partage ponctuellement ma position avec toi : ${lien}`;
+        window.open(construireSmsUrl(destinatairesProches(), msg), '_self');
+      } catch (error) {
+        alert("Impossible de récupérer la position GPS.");
+      }
+    });
+
+    btnPartageContinu.addEventListener('click', async () => {
+      if (contacts.length === 0) {
+        alert("Ajoute au moins un proche de confiance.");
+        return;
+      }
+
+      trackingSimule.style.display = 'block';
+      btnPartageContinu.textContent = 'Partage continu simulé actif';
+      btnPartageContinu.disabled = true;
+
+      try {
+        const lien = await recupererPosition();
+        const msg = `Simulation LightHer : partage continu activé. Position de départ : ${lien}. Dans l'app mobile, le lien serait mis à jour en continu.`;
+        window.open(construireSmsUrl(destinatairesProches(), msg), '_self');
+      } catch (error) {
+        trackingSimule.textContent = "Partage continu simulé actif, mais la position GPS n'a pas pu être récupérée.";
+      }
+
+      clearInterval(trackingSimulationInterval);
+      trackingSimulationInterval = setInterval(() => {
+        trackingSimule.textContent = `Partage continu simulé actif depuis ${new Date().toLocaleTimeString('fr-FR')}. Prototype web : pas de tracking arrière-plan réel.`;
+      }, 10000);
     });
 
     // --- LE GROS BOUTON SOS 
@@ -253,11 +455,21 @@
       btnSos.style.display = 'none';
       btnSos.nextElementSibling.style.display = 'none'; // Cache le petit texte
       conteneurRebours.style.display = 'flex';
+      sosStatus.innerHTML = '<strong>Alerte en préparation</strong>GPS en cours. Le SMS sera pré-rempli, pas envoyé automatiquement.';
       
       let tempsRestant = 5;
       affichageCompteur.innerText = tempsRestant;
+      messagePreview.textContent = "Message en préparation...";
 
-      try { gpsLink = await recupererPosition(); } catch (e) { console.warn("Erreur GPS"); }
+      try {
+        gpsLink = await recupererPosition();
+        etatUrgence.textContent = "Position récupérée. Préparation du SMS d'urgence.";
+      } catch (e) {
+        gpsLink = "[Position introuvable]";
+        etatUrgence.textContent = "Position GPS indisponible. Le message indiquera que la position est introuvable.";
+      }
+
+      messagePreview.textContent = construireMessageUrgence(gpsLink);
 
       timerInterval = setInterval(() => {
         tempsRestant--;
@@ -276,17 +488,20 @@
       conteneurRebours.style.display = 'none';
       btnSos.style.display = 'block';
       btnSos.nextElementSibling.style.display = 'block';
+      sosStatus.innerHTML = '<strong>Alerte annulée</strong>Aucun SMS n’a été ouvert.';
     });
 
-    // Envoi  au 17
+    // Préremplissage SMS vers le 17 puis vers les proches si disponibles.
     function lancerAlerte() {
       conteneurRebours.style.display = 'none';
       btnSos.style.display = 'block';
       btnSos.nextElementSibling.style.display = 'block';
-      
-      
-      const texteSms = `URGENT - Besoin aide. Ma position : ${gpsLink}`;
-      window.open(`sms:17?body=${encodeURIComponent(texteSms)}`, '_self');
+      sosStatus.innerHTML = '<strong>SMS pré-rempli</strong>Le navigateur ouvre l’application SMS. Tu dois confirmer l’envoi.';
+
+      const message = construireMessageUrgence(gpsLink);
+      const proches = destinatairesProches();
+      const destinataires = proches ? `17,${proches}` : '17';
+      window.open(construireSmsUrl(destinataires, message), '_self');
     }
   </script>
 </body>
