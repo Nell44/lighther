@@ -127,6 +127,18 @@
             border: 1px solid var(--vert);
         }
 
+        #ticket-municipal-preview {
+            display: none;
+            margin: -6px 0 18px;
+            padding: 10px 12px;
+            border-radius: var(--radius-input);
+            border: 1px solid rgba(245,158,11,0.35);
+            background: rgba(245,158,11,0.10);
+            color: var(--orange);
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+
         /* Étoiles en arrière-plan */
         .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
         .star {
@@ -180,6 +192,9 @@
                     <option value="obstacle">Obstacle</option>
                     <option value="incident">Incident / danger</option>
                 </select>
+            </div>
+            <div id="ticket-municipal-preview">
+                Simulation prototype : un ticket municipal serait transmis à la mairie compétente.
             </div>
 
             <!-- 4 critères du Score de Sécurité de 0 à 10 -->
@@ -252,6 +267,38 @@
         // 3. Calcul du Score SS en temps réel
         const ids = ['eclairage', 'affluence', 'incidents', 'sentiment'];
         const badgeScore = document.getElementById('badge-score');
+        const typeSignalementSelect = document.getElementById('type-signalement');
+        const ticketMunicipalPreview = document.getElementById('ticket-municipal-preview');
+
+        function getTicketMunicipalSimule(typeSignalement) {
+            if (typeSignalement === 'lampadaire') {
+                return {
+                    actif: true,
+                    statut: 'transmis',
+                    libelle: 'Ticket municipal simulé : lampadaire cassé transmis.'
+                };
+            }
+
+            if (typeSignalement === 'obstacle') {
+                return {
+                    actif: true,
+                    statut: 'en_cours',
+                    libelle: 'Ticket municipal simulé : obstacle transmis, traitement en cours.'
+                };
+            }
+
+            return {
+                actif: false,
+                statut: null,
+                libelle: ''
+            };
+        }
+
+        function mettreAJourTicketMunicipal() {
+            const ticket = getTicketMunicipalSimule(typeSignalementSelect.value);
+            ticketMunicipalPreview.style.display = ticket.actif ? 'block' : 'none';
+            ticketMunicipalPreview.textContent = ticket.libelle || '';
+        }
 
         function mettreAJourScore() {
             // Récupération des valeurs
@@ -280,9 +327,11 @@
         ids.forEach(id => {
             document.getElementById(id).addEventListener('input', mettreAJourScore);
         });
+        typeSignalementSelect.addEventListener('change', mettreAJourTicketMunicipal);
 
         // Initialisation au chargement
         mettreAJourScore();
+        mettreAJourTicketMunicipal();
 
         // 4. Envoi vers Firebase Firestore
         document.getElementById('btn-envoyer').addEventListener('click', () => {
@@ -298,6 +347,7 @@
                     const s = parseInt(document.getElementById('sentiment').value);
                     const typeSignalement = document.getElementById('type-signalement').value;
                     const ss = calculerSS(e, a, i, s);
+                    const ticketMunicipal = getTicketMunicipalSimule(typeSignalement);
 
                     try {
                         // Sauvegarde dans la collection 'signalements'
@@ -311,7 +361,10 @@
                             lat: position.coords.latitude,
                             lng: position.coords.longitude,
                             timestamp: new Date(),
-                            createdAt: serverTimestamp()
+                            createdAt: serverTimestamp(),
+                            ticketMunicipalSimule: ticketMunicipal.actif,
+                            statutTicketMunicipal: ticketMunicipal.statut,
+                            messageTicketMunicipal: ticketMunicipal.libelle
                         });
 
                         // Succès : arrêt du chrono et affichage du message

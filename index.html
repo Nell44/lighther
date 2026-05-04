@@ -212,6 +212,28 @@ font-size:.82rem;
 color:#6b5878;
 }
 
+.incident-alert{
+display:none;
+position:absolute;
+top:14px;
+left:14px;
+right:14px;
+z-index:520;
+padding:12px 14px;
+border-radius:14px;
+border:1px solid rgba(239,68,68,.45);
+background:rgba(127,29,29,.88);
+color:#fee2e2;
+box-shadow:0 10px 24px rgba(0,0,0,.28);
+font-size:.82rem;
+line-height:1.4;
+backdrop-filter:blur(8px);
+}
+
+.incident-alert.visible{
+display:block;
+}
+
 /* bouton + */
 .plus{
 position:fixed;
@@ -357,6 +379,7 @@ to{opacity:1;transform:translateY(0)}
 <section class="map-card">
 <div class="map-wrapper">
 <div id="carte"></div>
+<div class="incident-alert" id="incident-alert" role="status" aria-live="polite"></div>
 <div class="map-legend" aria-label="Légende des scores de sécurité">
 <div class="legend-title">Sécurité</div>
 <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Vert : sûr (SS ≥ 7)</div>
@@ -461,6 +484,14 @@ incident:'Incident / danger'
 })[type] || 'Rue normale';
 }
 
+function getMunicipalStatusLabel(status){
+return ({
+transmis:'transmis',
+en_cours:'en cours',
+resolu:'résolu'
+})[status] || status || 'non concerné';
+}
+
 function getSignalementVisual(d){
 const ss = Number(d.ss);
 if(!Number.isFinite(ss)){
@@ -477,8 +508,22 @@ return `
 <p><b>Score SS :</b> ${escapeHtml(visual.scoreLabel)}/10 - ${escapeHtml(visual.label)}</p>
 <p><b>Critères :</b> éclairage ${escapeHtml(d.eclairage ?? 'N/A')}/10, affluence ${escapeHtml(d.affluence ?? 'N/A')}/10</p>
 <p><b>Incidents :</b> ${escapeHtml(d.incidents ?? 'N/A')}/10 · sentiment ${escapeHtml(d.sentiment ?? 'N/A')}/10</p>
+${d.ticketMunicipalSimule ? `<p><b>Ticket municipal simulé :</b> ${escapeHtml(getMunicipalStatusLabel(d.statutTicketMunicipal))}</p>` : ''}
 <p class="popup-muted"><b>Fraîcheur :</b> ${escapeHtml(formatFreshness(d))}</p>
+${d.typeSignalement === 'incident' ? '<p class="popup-muted"><b>Alerte :</b> incident critique visible sur la carte.</p>' : ''}
 </div>`;
+}
+
+function updateIncidentAlert(signalements){
+const alert = document.getElementById('incident-alert');
+const incidents = signalements.filter(d => (d.typeSignalement || d.type) === 'incident' || Number(d.ss) < 4);
+if(incidents.length === 0){
+alert.classList.remove('visible');
+alert.textContent = '';
+return;
+}
+alert.textContent = `${incidents.length} signalement critique détecté sur la carte. Prototype : une notification push serait envoyée en version mobile.`;
+alert.classList.add('visible');
 }
 
 /* signalements firebase */
@@ -501,6 +546,7 @@ const legendNote = document.getElementById('legend-note');
 legendNote.textContent = useRecentOnly
 ? 'Affichage des signalements des 2 dernières heures.'
 : 'Mode démo : anciennes données incluses si peu de signalements récents.';
+updateIncidentAlert(signalementsToDisplay);
 
 signalementsToDisplay.forEach(d => {
 
