@@ -146,8 +146,13 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
     <script type="module">
-        import { db } from './firebase-config.js';
+        import { auth, db } from './firebase-config.js';
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
         import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+        onAuthStateChanged(auth, user => {
+            if (!user) window.location.href = 'auth.html';
+        });
 
         // Initialisation de la carte sur Paris par défaut
         let map = L.map('map-itineraire', { zoomControl: false }).setView([48.8566, 2.3522], 13);
@@ -284,19 +289,44 @@
             return Math.round(score * 10) / 10;
         }
 
-        async function getRiskZones() {
-            const snap = await getDocs(collection(db, "signalements"));
+        function buildDemoRiskZone(start, dest) {
+            return {
+                lat: (start.lat + dest.lat) / 2,
+                lng: (start.lng + dest.lng) / 2,
+                ss: 2,
+                typeSignalement: 'incident',
+                isCritical: true,
+                timestamp: new Date(),
+                demoLocal: true
+            };
+        }
+
+        async function getRiskZones(start, dest) {
             const allZones = [];
-            snap.forEach(doc => {
-                const zone = normalizeSignalement(doc.data());
-                if (zone?.isCritical) allZones.push(zone);
-            });
+            try {
+                const snap = await getDocs(collection(db, "signalements"));
+                snap.forEach(doc => {
+                    const zone = normalizeSignalement(doc.data());
+                    if (zone?.isCritical) allZones.push(zone);
+                });
+            } catch (error) {
+                console.error("Signalements indisponibles pour le routage :", error);
+            }
+
+            if (allZones.length === 0) {
+                return {
+                    zones: [buildDemoRiskZone(start, dest), ...virtualRiskZones],
+                    useRecentOnly: false,
+                    usingDemoData: true
+                };
+            }
 
             const recentZones = allZones.filter(isRecent);
             const useRecentOnly = recentZones.length >= MIN_RECENT_RISKS_FOR_DEMO;
             return {
                 zones: [...(useRecentOnly ? recentZones : allZones), ...virtualRiskZones],
-                useRecentOnly
+                useRecentOnly,
+                usingDemoData: false
             };
         }
 
@@ -341,7 +371,7 @@
                     radius: RECALC_TRIGGER_RADIUS_M,
                     weight: 2
                 }).addTo(riskLayer).bindPopup(
-                    `Zone critique · SS ${zone.ss}/10 · ${zone.typeSignalement === 'incident' ? 'Incident / danger' : 'À éviter'}`
+                    `Zone critique · SS ${zone.ss}/10 · ${zone.typeSignalement === 'incident' ? 'Incident / danger' : 'À éviter'}${zone.demoLocal ? ' · démo locale' : ''}`
                 );
             });
         }
@@ -370,14 +400,16 @@
             if (routingControlSafe) map.removeControl(routingControlSafe);
 
             // Récupération des zones rouges / incidents, avec filtre 2h et fallback démo
-            const riskResult = await getRiskZones();
+            const riskResult = await getRiskZones(userPos, destLatLng);
             activeRiskZones = riskResult.zones;
             drawRiskZones(activeRiskZones);
 
             if (options.reason === 'simulation') {
                 showRouteAlert("Simulation prototype : incident critique détecté à moins de 200 m. L'itinéraire sûr est recalculé automatiquement.");
             } else {
-                showRouteAlert(riskResult.useRecentOnly
+                showRouteAlert(riskResult.usingDemoData
+                    ? "Mode démo : aucune zone critique Firestore disponible, une zone locale est placée sur le trajet pour démontrer l'évitement."
+                    : riskResult.useRecentOnly
                     ? "Routage basé sur les signalements critiques des 2 dernières heures."
                     : "Mode démo : données anciennes incluses car il y a trop peu de signalements critiques récents.");
             }
