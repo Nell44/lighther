@@ -71,6 +71,28 @@
         }
         .slider-group label span { color: var(--pink-light); font-weight: bold; }
 
+        .type-group {
+            margin-bottom: 20px;
+        }
+
+        .type-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .type-help {
+            margin: -4px 0 10px;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            color: var(--text-muted);
+        }
+
+        #type-signalement {
+            margin-bottom: 0;
+        }
+
         /* Style des sliders pour matcher avec le thème de Sélène */
         input[type="range"] {
             width: 100%;
@@ -149,7 +171,18 @@
                 <span id="badge-score" class="badge-gris">En attente</span>
             </div>
 
-            <!-- 4 Sliders HTML de 0 à 10 -->
+            <div class="type-group">
+                <label for="type-signalement">Type de signalement</label>
+                <p class="type-help">Choisis le cas qui décrit le mieux la situation actuelle.</p>
+                <select id="type-signalement">
+                    <option value="rue_normale">Rue normale</option>
+                    <option value="lampadaire">Lampadaire cassé</option>
+                    <option value="obstacle">Obstacle</option>
+                    <option value="incident">Incident / danger</option>
+                </select>
+            </div>
+
+            <!-- 4 critères du Score de Sécurité de 0 à 10 -->
             <div class="slider-group">
                 <label for="eclairage">Éclairage (35%) <span id="val-eclairage">5/10</span></label>
                 <input type="range" id="eclairage" min="0" max="10" value="5">
@@ -166,7 +199,7 @@
             </div>
             
             <div class="slider-group">
-                <label for="sentiment">Sentiment (10%) <span id="val-sentiment">5/10</span></label>
+                <label for="sentiment">Sentiment de sécurité (10%) <span id="val-sentiment">5/10</span></label>
                 <input type="range" id="sentiment" min="0" max="10" value="5">
             </div>
 
@@ -195,7 +228,7 @@
         // Import des dépendances du projet
         import { db } from './firebase-config.js';
         import { calculerSS, getCouleur } from './score.js';
-        import { addDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+        import { addDoc, collection, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
         // 1. Génération des étoiles
         const starsEl = document.getElementById('stars');
@@ -263,6 +296,7 @@
                     const a = parseInt(document.getElementById('affluence').value);
                     const i = parseInt(document.getElementById('incidents').value);
                     const s = parseInt(document.getElementById('sentiment').value);
+                    const typeSignalement = document.getElementById('type-signalement').value;
                     const ss = calculerSS(e, a, i, s);
 
                     try {
@@ -272,10 +306,12 @@
                             affluence: a,
                             incidents: i,
                             sentiment: s,
+                            typeSignalement: typeSignalement,
                             ss: ss,
                             lat: position.coords.latitude,
                             lng: position.coords.longitude,
-                            timestamp: new Date()
+                            timestamp: new Date(),
+                            createdAt: serverTimestamp()
                         });
 
                         // Succès : arrêt du chrono et affichage du message

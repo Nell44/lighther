@@ -140,6 +140,78 @@ border-radius:22px;
 overflow:hidden;
 }
 
+.map-wrapper{
+position:relative;
+}
+
+.map-legend{
+position:absolute;
+left:14px;
+bottom:14px;
+z-index:500;
+display:grid;
+gap:7px;
+background:rgba(13,5,24,.88);
+border:1px solid rgba(217,70,239,.25);
+border-radius:14px;
+padding:12px 14px;
+box-shadow:0 10px 24px rgba(0,0,0,.28);
+backdrop-filter:blur(8px);
+}
+
+.legend-title{
+font-size:.72rem;
+font-weight:700;
+letter-spacing:.08em;
+text-transform:uppercase;
+color:var(--text-primary);
+}
+
+.legend-item{
+display:flex;
+align-items:center;
+gap:8px;
+font-size:.78rem;
+color:var(--text-muted);
+white-space:nowrap;
+}
+
+.legend-dot{
+width:11px;
+height:11px;
+border-radius:50%;
+display:inline-block;
+box-shadow:0 0 0 3px rgba(255,255,255,.08);
+}
+
+.legend-note{
+max-width:210px;
+font-size:.68rem;
+line-height:1.35;
+color:var(--text-muted);
+}
+
+.popup-signalement{
+min-width:210px;
+color:#1f1230;
+font-family:'DM Sans',sans-serif;
+}
+
+.popup-signalement strong{
+display:block;
+margin-bottom:6px;
+font-size:.95rem;
+}
+
+.popup-signalement p{
+margin:3px 0;
+font-size:.82rem;
+}
+
+.popup-muted{
+color:#6b5878;
+}
+
 /* bouton + */
 .plus{
 position:fixed;
@@ -283,7 +355,17 @@ to{opacity:1;transform:translateY(0)}
 </header>
 
 <section class="map-card">
+<div class="map-wrapper">
 <div id="carte"></div>
+<div class="map-legend" aria-label="Légende des scores de sécurité">
+<div class="legend-title">Sécurité</div>
+<div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Vert : sûr (SS ≥ 7)</div>
+<div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Orange : vigilance (4 à 6.9)</div>
+<div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Rouge : à éviter (&lt; 4)</div>
+<div class="legend-item"><span class="legend-dot" style="background:#9CA3AF"></span>Gris : données insuffisantes</div>
+<div class="legend-note" id="legend-note">Filtre 2h prêt avec fallback démo.</div>
+</div>
+</div>
 </section>
 
 <a href="signalement.html" class="plus">+</a>
@@ -328,31 +410,111 @@ starsEl.appendChild(s);
 
 /* carte */
 const carte = L.map('carte').setView([48.8566,2.3522],13);
+const signalementsLayer = L.layerGroup().addTo(carte);
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const MIN_RECENT_FOR_DEMO = 3;
 
 L.tileLayer(
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 ).addTo(carte);
 
+function escapeHtml(value){
+return String(value ?? '')
+.replaceAll('&','&amp;')
+.replaceAll('<','&lt;')
+.replaceAll('>','&gt;')
+.replaceAll('"','&quot;')
+.replaceAll("'",'&#039;');
+}
+
+function getSignalementDate(d){
+const raw = d.createdAt || d.timestamp;
+if(!raw) return null;
+if(typeof raw.toDate === 'function') return raw.toDate();
+if(raw instanceof Date) return raw;
+const date = new Date(raw);
+return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isRecent(d){
+const date = getSignalementDate(d);
+if(!date) return false;
+return Date.now() - date.getTime() <= TWO_HOURS_MS;
+}
+
+function formatFreshness(d){
+const date = getSignalementDate(d);
+if(!date) return 'date inconnue';
+const diffMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+if(diffMinutes < 1) return 'à l’instant';
+if(diffMinutes < 60) return `il y a ${diffMinutes} min`;
+const hours = Math.round(diffMinutes / 60);
+return `il y a ${hours} h`;
+}
+
+function getTypeLabel(type){
+return ({
+rue_normale:'Rue normale',
+lampadaire:'Lampadaire cassé',
+obstacle:'Obstacle',
+incident:'Incident / danger'
+})[type] || 'Rue normale';
+}
+
+function getSignalementVisual(d){
+const ss = Number(d.ss);
+if(!Number.isFinite(ss)){
+return { couleur:'#9CA3AF', label:'Données insuffisantes', scoreLabel:'N/A' };
+}
+const info = getCouleur(ss);
+return { ...info, scoreLabel:ss };
+}
+
+function buildPopup(d, visual){
+return `
+<div class="popup-signalement">
+<strong>Signalement ${escapeHtml(getTypeLabel(d.typeSignalement || d.type))}</strong>
+<p><b>Score SS :</b> ${escapeHtml(visual.scoreLabel)}/10 - ${escapeHtml(visual.label)}</p>
+<p><b>Critères :</b> éclairage ${escapeHtml(d.eclairage ?? 'N/A')}/10, affluence ${escapeHtml(d.affluence ?? 'N/A')}/10</p>
+<p><b>Incidents :</b> ${escapeHtml(d.incidents ?? 'N/A')}/10 · sentiment ${escapeHtml(d.sentiment ?? 'N/A')}/10</p>
+<p class="popup-muted"><b>Fraîcheur :</b> ${escapeHtml(formatFreshness(d))}</p>
+</div>`;
+}
+
 /* signalements firebase */
 onSnapshot(collection(db,'signalements'), (snap)=>{
 
+signalementsLayer.clearLayers();
+
+const allSignalements = [];
 snap.forEach(doc => {
-
 const d = doc.data();
+if(Number.isFinite(Number(d.lat)) && Number.isFinite(Number(d.lng))){
+allSignalements.push(d);
+}
+});
 
-const { couleur,label } = getCouleur(d.ss);
+const recentSignalements = allSignalements.filter(isRecent);
+const useRecentOnly = recentSignalements.length >= MIN_RECENT_FOR_DEMO;
+const signalementsToDisplay = useRecentOnly ? recentSignalements : allSignalements;
+const legendNote = document.getElementById('legend-note');
+legendNote.textContent = useRecentOnly
+? 'Affichage des signalements des 2 dernières heures.'
+: 'Mode démo : anciennes données incluses si peu de signalements récents.';
 
-L.circle([d.lat,d.lng],{
-color:couleur,
-fillColor:couleur,
-fillOpacity:1,
+signalementsToDisplay.forEach(d => {
+
+const visual = getSignalementVisual(d);
+
+L.circle([Number(d.lat),Number(d.lng)],{
+color:visual.couleur,
+fillColor:visual.couleur,
+fillOpacity:.85,
 radius:150,
 weight:3
 })
-.addTo(carte)
-.bindPopup(
-'SS : ' + d.ss + '/10 - ' + label
-);
+.addTo(signalementsLayer)
+.bindPopup(buildPopup(d, visual));
 
 });
 
