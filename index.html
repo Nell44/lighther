@@ -436,6 +436,46 @@ const carte = L.map('carte').setView([48.8566,2.3522],13);
 const signalementsLayer = L.layerGroup().addTo(carte);
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const MIN_RECENT_FOR_DEMO = 3;
+const DEMO_SIGNALEMENTS = [
+{
+eclairage:8,
+affluence:7,
+incidents:9,
+sentiment:8,
+typeSignalement:'rue_normale',
+ss:8,
+lat:48.8566,
+lng:2.3522,
+timestamp:new Date(),
+demoLocal:true
+},
+{
+eclairage:5,
+affluence:5,
+incidents:5,
+sentiment:5,
+typeSignalement:'lampadaire',
+ss:5,
+lat:48.861,
+lng:2.34,
+timestamp:new Date(),
+ticketMunicipalSimule:true,
+statutTicketMunicipal:'transmis',
+demoLocal:true
+},
+{
+eclairage:2,
+affluence:2,
+incidents:1,
+sentiment:2,
+typeSignalement:'incident',
+ss:2,
+lat:48.849,
+lng:2.36,
+timestamp:new Date(),
+demoLocal:true
+}
+];
 
 L.tileLayer(
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -511,6 +551,7 @@ return `
 ${d.ticketMunicipalSimule ? `<p><b>Ticket municipal simulé :</b> ${escapeHtml(getMunicipalStatusLabel(d.statutTicketMunicipal))}</p>` : ''}
 <p class="popup-muted"><b>Fraîcheur :</b> ${escapeHtml(formatFreshness(d))}</p>
 ${d.typeSignalement === 'incident' ? '<p class="popup-muted"><b>Alerte :</b> incident critique visible sur la carte.</p>' : ''}
+${d.demoLocal ? '<p class="popup-muted"><b>Démo :</b> donnée locale non enregistrée dans Firebase.</p>' : ''}
 </div>`;
 }
 
@@ -531,7 +572,7 @@ onSnapshot(collection(db,'signalements'), (snap)=>{
 
 signalementsLayer.clearLayers();
 
-const allSignalements = [];
+let allSignalements = [];
 snap.forEach(doc => {
 const d = doc.data();
 if(Number.isFinite(Number(d.lat)) && Number.isFinite(Number(d.lng))){
@@ -539,11 +580,18 @@ allSignalements.push(d);
 }
 });
 
+const usingDemoData = allSignalements.length === 0;
+if(usingDemoData){
+allSignalements = DEMO_SIGNALEMENTS;
+}
+
 const recentSignalements = allSignalements.filter(isRecent);
 const useRecentOnly = recentSignalements.length >= MIN_RECENT_FOR_DEMO;
 const signalementsToDisplay = useRecentOnly ? recentSignalements : allSignalements;
 const legendNote = document.getElementById('legend-note');
-legendNote.textContent = useRecentOnly
+legendNote.textContent = usingDemoData
+? 'Mode démo : données locales affichées car Firestore est vide.'
+: useRecentOnly
 ? 'Affichage des signalements des 2 dernières heures.'
 : 'Mode démo : anciennes données incluses si peu de signalements récents.';
 updateIncidentAlert(signalementsToDisplay);
@@ -567,6 +615,21 @@ weight:3
 }, (error)=>{
 
 console.error("Erreur Firebase :", error);
+signalementsLayer.clearLayers();
+DEMO_SIGNALEMENTS.forEach(d => {
+const visual = getSignalementVisual(d);
+L.circle([Number(d.lat),Number(d.lng)],{
+color:visual.couleur,
+fillColor:visual.couleur,
+fillOpacity:.85,
+radius:150,
+weight:3
+})
+.addTo(signalementsLayer)
+.bindPopup(buildPopup(d, visual));
+});
+document.getElementById('legend-note').textContent = 'Mode démo : Firestore indisponible, données locales affichées.';
+updateIncidentAlert(DEMO_SIGNALEMENTS);
 
 });
 
