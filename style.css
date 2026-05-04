@@ -343,6 +343,34 @@ nav a:hover {
     box-shadow: 0 4px 15px var(--pink-glow);
 }
 
+@media (max-width: 768px) {
+    .page-itineraire {
+        padding: 14px 12px calc(84px + env(safe-area-inset-bottom));
+    }
+
+    .page-itineraire .search-box {
+        margin-bottom: 8px;
+    }
+
+    #map-itineraire {
+        min-height: 42vh;
+        margin-bottom: 8px;
+        border-radius: 16px;
+    }
+
+    .info-panel {
+        bottom: 0;
+        max-height: 38vh;
+        overflow-y: auto;
+        padding-bottom: 4px;
+    }
+
+    .info-panel .carte-info {
+        padding: 12px;
+        border-radius: 18px;
+    }
+}
+
 /* Masquer les instructions texte par défaut de Leaflet Routing Machine */
 .leaflet-routing-container {
     display: none !important;

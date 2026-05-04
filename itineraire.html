@@ -62,6 +62,56 @@
 
             .search-result:hover { background: rgba(217,70,239,.12); }
 
+            .search-empty {
+                color: var(--text-muted);
+                cursor: default;
+            }
+
+            .search-result-title {
+                display: block;
+                font-weight: 700;
+                color: var(--text-primary);
+            }
+
+            .search-result-subtitle {
+                display: block;
+                margin-top: 3px;
+                font-size: .72rem;
+                color: var(--text-muted);
+                line-height: 1.3;
+            }
+
+            .user-position-marker {
+                position: relative;
+                width: 34px;
+                height: 34px;
+            }
+
+            .user-position-marker .pulse {
+                position: absolute;
+                inset: 0;
+                border-radius: 999px;
+                background: rgba(217,70,239,.24);
+                animation: userPulse 1.9s ease-out infinite;
+            }
+
+            .user-position-marker .dot {
+                position: absolute;
+                left: 9px;
+                top: 9px;
+                width: 16px;
+                height: 16px;
+                border-radius: 999px;
+                background: #38bdf8;
+                border: 3px solid #ffffff;
+                box-shadow: 0 4px 18px rgba(56,189,248,.55);
+            }
+
+            @keyframes userPulse {
+                from { transform: scale(.55); opacity: .85; }
+                to { transform: scale(1.45); opacity: 0; }
+            }
+
             .route-choices {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -146,8 +196,100 @@
                 display: inline-block;
             }
 
+            .guidance-summary {
+                display: none;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+
+            .guidance-summary.visible { display: flex; }
+
+            .guidance-summary strong {
+                display: block;
+                color: var(--pink-light);
+                font-size: .86rem;
+                margin-bottom: 3px;
+            }
+
+            .guidance-summary span {
+                display: block;
+                color: var(--text-muted);
+                font-size: .75rem;
+                line-height: 1.35;
+            }
+
+            .guidance-summary .btn-secondary {
+                width: auto;
+                min-width: 130px;
+                padding: 10px 12px;
+                border-radius: 12px;
+                font-size: .76rem;
+            }
+
             @media (max-width: 480px) {
-                .route-choices { grid-template-columns: 1fr; }
+                .route-alert {
+                    margin-bottom: 8px;
+                    padding: 8px 10px;
+                    font-size: .68rem;
+                }
+
+                .search-help {
+                    font-size: .68rem;
+                    margin-bottom: 8px;
+                }
+
+                .search-result {
+                    padding: 10px 11px;
+                    font-size: .78rem;
+                }
+
+                .route-legend {
+                    gap: 6px;
+                    margin-bottom: 8px;
+                    font-size: .65rem;
+                }
+
+                .route-choices {
+                    grid-template-columns: 1fr;
+                    gap: 8px;
+                    margin-bottom: 10px;
+                }
+
+                .route-choice {
+                    border-radius: 12px;
+                    padding: 10px;
+                }
+
+                .choice-title {
+                    margin-bottom: 4px;
+                    font-size: .76rem;
+                }
+
+                .choice-meta {
+                    gap: 2px;
+                    font-size: .68rem;
+                }
+
+                .route-actions {
+                    gap: 8px;
+                }
+
+                .btn-secondary,
+                #start-guidage {
+                    padding: 11px;
+                    font-size: .78rem;
+                }
+
+                .guidance-summary {
+                    align-items: stretch;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .guidance-summary .btn-secondary {
+                    width: 100%;
+                }
             }
         </style>
     </head>
@@ -166,35 +308,47 @@
 
         <div class="info-panel" id="info-panel" style="display: none;">
             <div class="carte-info">
-                <div class="route-alert" id="route-alert"></div>
-                <div class="route-legend">
-                    <span><i style="background:#16a34a"></i>Trajet à pied sécurisé</span>
-                    <span><i style="background:#475569"></i>Trajet le plus court</span>
+                <div class="guidance-summary" id="guidance-summary">
+                    <div>
+                        <strong id="guidance-title">Guidage actif</strong>
+                        <span id="guidance-meta">Durée estimée à pied : -- · SS --/10</span>
+                    </div>
+                    <button class="btn-secondary" id="edit-route" type="button">Voir les options</button>
                 </div>
 
-                <div class="route-choices" role="group" aria-label="Choix d'itinéraire">
-                    <button class="route-choice active" id="choice-safe" type="button" data-route="safe">
-                        <span class="choice-title">Trajet à pied sécurisé</span>
-                        <span class="choice-meta">
-                            <span><b id="time-safe">-- min</b> · <span id="distance-safe">-- km</span></span>
-                            <span>SS moyen : <span id="score-safe">--/10</span></span>
-                            <span>Zones rouges évitées : <span id="avoided-safe">--</span></span>
-                        </span>
-                    </button>
+                <div id="route-options">
+                    <div class="route-alert" id="route-alert"></div>
+                    <div class="route-legend">
+                        <span><i style="background:#16a34a"></i>Trajet à pied sécurisé</span>
+                        <span><i style="background:#475569"></i>Trajet à pied le plus court</span>
+                    </div>
 
-                    <button class="route-choice" id="choice-direct" type="button" data-route="direct">
-                        <span class="choice-title">Trajet à pied le plus court</span>
-                        <span class="choice-meta">
-                            <span><b id="time-direct">-- min</b> · <span id="distance-direct">-- km</span></span>
-                            <span>SS moyen : <span id="score-direct">--/10</span></span>
-                            <span>Zones rouges traversées : <span id="crossed-direct">--</span></span>
-                        </span>
-                    </button>
-                </div>
+                    <div class="route-choices" role="group" aria-label="Choix d'itinéraire">
+                        <button class="route-choice active" id="choice-safe" type="button" data-route="safe">
+                            <span class="choice-title">Trajet à pied sécurisé</span>
+                            <span class="choice-meta">
+                                <span>Durée estimée à pied : <b id="time-safe">-- min</b></span>
+                                <span>Distance : <span id="distance-safe">-- km</span></span>
+                                <span>SS moyen : <span id="score-safe">--/10</span></span>
+                                <span>Zones rouges évitées : <span id="avoided-safe">--</span></span>
+                            </span>
+                        </button>
 
-                <div class="route-actions">
-                    <button class="btn-principal" id="start-guidage">Lancer le guidage</button>
-                    <button class="btn-secondary" id="simulate-incident" type="button">Simuler un incident critique à moins de 200 m</button>
+                        <button class="route-choice" id="choice-direct" type="button" data-route="direct">
+                            <span class="choice-title">Trajet à pied le plus court</span>
+                            <span class="choice-meta">
+                                <span>Durée estimée à pied : <b id="time-direct">-- min</b></span>
+                                <span>Distance : <span id="distance-direct">-- km</span></span>
+                                <span>SS moyen : <span id="score-direct">--/10</span></span>
+                                <span>Zones rouges traversées : <span id="crossed-direct">--</span></span>
+                            </span>
+                        </button>
+                    </div>
+
+                    <div class="route-actions">
+                        <button class="btn-principal" id="start-guidage">Lancer le guidage</button>
+                        <button class="btn-secondary" id="simulate-incident" type="button">Simuler un incident critique à moins de 200 m</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -229,11 +383,14 @@
         let selectedRoute = 'safe';
         let activeRiskZones = [];
         let virtualRiskZones = [];
+        let lastRouteStats = { safe: null, direct: null };
+        let guidanceActive = false;
         const riskLayer = L.layerGroup().addTo(map);
         const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
         const MIN_RECENT_RISKS_FOR_DEMO = 2;
         const ROUTE_RISK_RADIUS_M = 220;
         const RECALC_TRIGGER_RADIUS_M = 200;
+        const WALKING_SPEED_KMH = 4.8;
         const searchResultsEl = document.getElementById('search-results');
         let searchTimer = null;
 
@@ -243,9 +400,15 @@
         navigator.geolocation.getCurrentPosition(pos => {
             userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
             map.setView(userPos, 15);
-            L.circleMarker(userPos, { color: '#D946EF', radius: 8, fillOpacity: 1 }).addTo(map).bindPopup("Moi");
+            L.marker(userPos, {
+                icon: L.divIcon({
+                    className: '',
+                    html: '<div class="user-position-marker"><span class="pulse"></span><span class="dot"></span></div>',
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 17]
+                })
+            }).addTo(map).bindPopup("Vous êtes ici");
         }, () => {
-            console.error("Géolocalisation refusée");
             showToast("Géolocalisation refusée : impossible de calculer le départ automatiquement.", 'error');
         });
 
@@ -344,6 +507,11 @@
             return (meters / 1000).toFixed(1) + ' km';
         }
 
+        function estimateWalkingMinutes(meters) {
+            if (!Number.isFinite(meters) || meters <= 0) return null;
+            return Math.max(1, Math.round((meters / 1000) / WALKING_SPEED_KMH * 60));
+        }
+
         function countZonesNearRoute(coords, zones, radius) {
             return zones.filter(zone => distanceToRoute(L.latLng(zone.lat, zone.lng), coords) <= radius).length;
         }
@@ -379,7 +547,7 @@
                     if (zone?.isCritical) allZones.push(zone);
                 });
             } catch (error) {
-                console.error("Signalements indisponibles pour le routage :", error);
+                showToast("Signalements indisponibles, mode démo activé pour le routage.", 'error');
             }
 
             if (allZones.length === 0) {
@@ -410,24 +578,55 @@
             document.querySelectorAll('.route-choice').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.route === route);
             });
+            if (guidanceActive) updateGuidanceSummary();
         }
 
         function updateRouteStats(kind, route, zones, avoidedBySafe = 0) {
             const coords = route.coordinates || [];
-            const minutes = Math.round(route.summary.totalTime / 60);
             const meters = route.summary.totalDistance;
+            const minutes = estimateWalkingMinutes(meters);
             const crossed = countZonesNearRoute(coords, zones, ROUTE_RISK_RADIUS_M);
             const score = estimateRouteSecurity(coords, zones);
+            const stats = {
+                minutes,
+                distance: formatDistance(meters),
+                score,
+                crossed,
+                avoided: Math.max(0, avoidedBySafe)
+            };
 
-            document.getElementById(`time-${kind}`).innerText = minutes + ' min';
-            document.getElementById(`distance-${kind}`).innerText = formatDistance(meters);
+            lastRouteStats[kind] = stats;
+
+            document.getElementById(`time-${kind}`).innerText = minutes ? minutes + ' min' : '-- min';
+            document.getElementById(`distance-${kind}`).innerText = stats.distance;
             document.getElementById(`score-${kind}`).innerText = score + '/10';
 
             if (kind === 'safe') {
-                document.getElementById('avoided-safe').innerText = Math.max(0, avoidedBySafe);
+                document.getElementById('avoided-safe').innerText = stats.avoided;
             } else {
                 document.getElementById('crossed-direct').innerText = crossed;
             }
+
+            if (guidanceActive && selectedRoute === kind) updateGuidanceSummary();
+        }
+
+        function updateGuidanceSummary() {
+            const stats = lastRouteStats[selectedRoute];
+            const title = selectedRoute === 'safe' ? 'Trajet à pied sécurisé' : 'Trajet à pied le plus court';
+            const duration = stats?.minutes ? `${stats.minutes} min` : '-- min';
+            const distance = stats?.distance || '-- km';
+            const score = stats?.score ? `${stats.score}/10` : '--/10';
+            document.getElementById('guidance-title').textContent = title;
+            document.getElementById('guidance-meta').textContent = `Durée estimée à pied : ${duration} · ${distance} · SS ${score}`;
+        }
+
+        function setGuidanceMode(active) {
+            guidanceActive = active;
+            const summary = document.getElementById('guidance-summary');
+            const options = document.getElementById('route-options');
+            summary.classList.toggle('visible', active);
+            options.style.display = active ? 'none' : 'block';
+            if (active) updateGuidanceSummary();
         }
 
         function drawRiskZones(zones) {
@@ -463,6 +662,8 @@
         async function calculerItineraires(destLatLng, options = {}) {
             if (!userPos) return showToast("Position GPS introuvable. Autorise la localisation pour calculer le départ.", 'error');
             currentDestination = destLatLng;
+            setGuidanceMode(false);
+            lastRouteStats = { safe: null, direct: null };
 
             // Nettoyage si une recherche a déjà été faite
             if (routingControlDirect) map.removeControl(routingControlDirect);
@@ -525,21 +726,65 @@
             }, 3200);
         }
 
+        function compactDisplayName(item) {
+            return (item.display_name || '')
+                .split(',')
+                .map(part => part.trim())
+                .filter(part => part && !/^b[aâ]timents?\b/i.test(part) && !/^(a|b)$/i.test(part))
+                .slice(0, 4)
+                .join(', ');
+        }
+
+        function getCity(address = {}) {
+            return address.city || address.town || address.village || address.municipality || address.suburb || address.county || '';
+        }
+
+        function buildSearchLabel(item) {
+            const address = item.address || {};
+            const city = getCity(address);
+            const postcode = address.postcode ? ` (${address.postcode})` : '';
+            const road = address.road || address.pedestrian || address.footway || address.path || address.cycleway || '';
+            const houseNumber = address.house_number || '';
+            const poi = item.name || address.restaurant || address.cafe || address.bar || address.pub || address.shop || address.amenity || address.leisure || '';
+
+            if (poi && city && !/^(b[aâ]timents?|building)$/i.test(poi)) {
+                return `${poi}, ${city}${postcode}`;
+            }
+
+            if (road && city) {
+                const number = houseNumber ? `${houseNumber} ` : '';
+                return `${number}${road}, ${city}${postcode}`;
+            }
+
+            if (city && address.postcode) return `${city} (${address.postcode})`;
+            return compactDisplayName(item) || item.display_name || 'Résultat sans libellé';
+        }
+
+        function buildSearchSubtitle(item, label) {
+            const compact = compactDisplayName(item);
+            if (!compact || compact === label) return 'France';
+            return compact;
+        }
+
         function renderSearchResults(results) {
             searchResultsEl.innerHTML = '';
             if (results.length === 0) {
-                searchResultsEl.innerHTML = '<button class="search-result" type="button">Aucun résultat trouvé. Essaie avec la ville ou le code postal.</button>';
+                searchResultsEl.innerHTML = '<button class="search-result search-empty" type="button">Aucun résultat trouvé en France pour cette recherche.</button>';
                 searchResultsEl.classList.add('visible');
                 return;
             }
 
             results.forEach(item => {
+                const label = buildSearchLabel(item);
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'search-result';
-                btn.textContent = item.display_name;
+                btn.title = item.display_name || label;
+                btn.innerHTML = `<span class="search-result-title"></span><span class="search-result-subtitle"></span>`;
+                btn.querySelector('.search-result-title').textContent = label;
+                btn.querySelector('.search-result-subtitle').textContent = buildSearchSubtitle(item, label);
                 btn.addEventListener('click', () => {
-                    document.getElementById('destination').value = item.display_name;
+                    document.getElementById('destination').value = label;
                     searchResultsEl.classList.remove('visible');
                     calculerItineraires(L.latLng(Number(item.lat), Number(item.lon)));
                 });
@@ -556,10 +801,32 @@
             }
 
             try {
-                const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&q=${encodeURIComponent(term)}`);
+                const params = new URLSearchParams({
+                    format: 'json',
+                    limit: '8',
+                    addressdetails: '1',
+                    countrycodes: 'fr',
+                    'accept-language': 'fr',
+                    q: term
+                });
+
+                if (userPos) {
+                    const latSpan = 0.8;
+                    const lngSpan = 1.1;
+                    params.set('viewbox', [
+                        userPos.lng - lngSpan,
+                        userPos.lat + latSpan,
+                        userPos.lng + lngSpan,
+                        userPos.lat - latSpan
+                    ].join(','));
+                    params.set('bounded', '0');
+                }
+
+                const resp = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
                 const data = await resp.json();
-                renderSearchResults(data);
-                if (data.length === 0) showToast("Aucune destination trouvée.", 'error');
+                const franceOnly = data.filter(item => !item.address?.country_code || item.address.country_code.toLowerCase() === 'fr');
+                renderSearchResults(franceOnly);
+                if (franceOnly.length === 0) showToast("Aucun résultat trouvé en France.", 'error');
             } catch (error) {
                 showToast("Recherche indisponible. Vérifie la connexion réseau.", 'error');
             }
@@ -583,8 +850,18 @@
         });
 
         document.getElementById('start-guidage').addEventListener('click', () => {
+            if (!lastRouteStats[selectedRoute]) {
+                showToast("Choisis une suggestion puis attends le calcul du trajet.", 'error');
+                return;
+            }
             const label = selectedRoute === 'safe' ? 'la ligne verte' : 'la ligne gris foncé';
+            setGuidanceMode(true);
             showToast(`Guidage prototype lancé. Suivez ${label}.`, 'success');
+        });
+
+        document.getElementById('edit-route').addEventListener('click', () => {
+            setGuidanceMode(false);
+            showToast("Options de trajet affichées.", 'success');
         });
 
         document.getElementById('simulate-incident').addEventListener('click', () => {
