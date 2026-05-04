@@ -28,15 +28,3 @@ function getCouleur(ss) {
 
 // Export des fonctions
 export { calculerSS, getCouleur };
-
-
-// Tests
-
-console.log("Test 1 :", calculerSS(8, 7, 9, 6), getCouleur(calculerSS(8, 7, 9, 6)));
-// attendu ≈ score élevé → vert
-
-console.log("Test 2 :", calculerSS(5, 5, 5, 5), getCouleur(calculerSS(5, 5, 5, 5)));
-// attendu ≈ score moyen → orange
-
-console.log("Test 3 :", calculerSS(2, 3, 1, 2), getCouleur(calculerSS(2, 3, 1, 2)));
-// attendu ≈ score faible → rouge

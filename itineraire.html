@@ -9,7 +9,6 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
         
         <link rel="stylesheet" href="style.css" />
-        <link rel="stylesheet" href="itineraire.css" />
     </head>
     <body>
 
@@ -132,7 +131,7 @@
         // 3. Barre de recherche (Enter pour valider)
         document.getElementById('destination').addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
-                const queryAddr = e.target.value;
+                const queryAddr = encodeURIComponent(e.target.value);
                 const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${queryAddr}`);
                 const data = await resp.json();
                 if (data.length > 0) {
