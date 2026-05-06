@@ -10,6 +10,55 @@
         
         <link rel="stylesheet" href="style.css" />
         <style>
+
+            .app-toast.success{
+background:linear-gradient(135deg,#D946EF,#A21CAF);
+color:white;
+}
+
+            #locate-btn{
+position:fixed;
+
+bottom:50px;
+right:30px;
+
+z-index:9999;
+
+width:52px;
+height:52px;
+
+border:none;
+border-radius:50%;
+
+background:white;
+color:black;
+
+font-size:22px;
+
+cursor:pointer;
+
+box-shadow:0 4px 14px rgba(0,0,0,.35);
+
+transition:.2s;
+}
+
+#locate-btn:hover{
+transform:scale(1.08);
+}
+
+@media (max-width:768px){
+
+#locate-btn{
+bottom:50px;
+right:14px;
+
+width:46px;
+height:46px;
+
+font-size:20px;
+}
+
+}
             .route-alert {
                 display: none;
                 margin-bottom: 12px;
@@ -315,6 +364,8 @@
         <div class="search-results" id="search-results"></div>
 
         <div id="map-itineraire"></div>
+        <!-- bouton recentrer -->
+                <button id="locate-btn">📍</button>
 
         <button class="panel-toggle panel-open" id="open-route-panel" type="button">Voir les options</button>
 
@@ -962,6 +1013,36 @@
 
             calculerItineraires(currentDestination, { reason: 'simulation' });
         });
+
+
+const locateBtn = document.getElementById("locate-btn");
+
+if (locateBtn) {
+
+locateBtn.addEventListener("click", () => {
+
+navigator.geolocation.getCurrentPosition((pos) => {
+
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
+
+userPos = L.latLng(lat, lng);
+
+/* recentrer la carte */
+map.flyTo(userPos, 16);
+
+showToast("Position recentrée.", "success");
+
+}, () => {
+
+showToast("Impossible d'obtenir votre position.", "error");
+
+});
+
+});
+
+}
+
     </script>
 
     </body>
