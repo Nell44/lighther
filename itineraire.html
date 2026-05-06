@@ -81,49 +81,6 @@
                 line-height: 1.3;
             }
 
-            .user-position-marker {
-                position: relative;
-                width: 34px;
-                height: 34px;
-            }
-
-            .user-position-marker .pulse {
-                position: absolute;
-                inset: 0;
-                border-radius: 999px;
-                background: rgba(217,70,239,.24);
-                animation: userPulse 1.9s ease-out infinite;
-            }
-
-            .user-position-marker .dot {
-                position: absolute;
-                left: 7px;
-                top: 7px;
-                width: 20px;
-                height: 20px;
-                border-radius: 999px;
-                background: linear-gradient(135deg, #38bdf8, #d946ef);
-                border: 3px solid #ffffff;
-                box-shadow: 0 4px 18px rgba(56,189,248,.55);
-            }
-
-            .user-position-marker .dot::after {
-                content: '';
-                position: absolute;
-                left: 50%;
-                top: 50%;
-                width: 6px;
-                height: 6px;
-                transform: translate(-50%, -50%);
-                border-radius: 999px;
-                background: #ffffff;
-            }
-
-            @keyframes userPulse {
-                from { transform: scale(.55); opacity: .85; }
-                to { transform: scale(1.45); opacity: 0; }
-            }
-
             .route-choices {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -436,6 +393,7 @@
         // Initialisation de la carte sur Paris par défaut
         let map = L.map('map-itineraire', { zoomControl: false }).setView([48.8566, 2.3522], 13);
         let userPos = null;
+        let destinationMarker = null;
         let routingControlDirect = null;
         let routingControlSafe = null;
         let currentDestination = null;
@@ -456,18 +414,33 @@
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+        function createUserPositionIcon() {
+            return L.divIcon({
+                className: '',
+                html: '<div class="user-position-marker" aria-label="Vous êtes ici"><span class="pulse"></span><span class="dot"></span></div>',
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+                popupAnchor: [0, -16]
+            });
+        }
+
+        function createDestinationIcon() {
+            return L.divIcon({
+                className: '',
+                html: '<div class="destination-position-marker" aria-label="Destination"><span class="pulse"></span><span class="dot"></span></div>',
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+                popupAnchor: [0, -16]
+            });
+        }
+
         // 1. Récupérer la position GPS
         navigator.geolocation.getCurrentPosition(pos => {
             userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
             map.setView(userPos, 15);
             L.marker(userPos, {
-                icon: L.divIcon({
-                    className: '',
-                    html: '<div class="user-position-marker" aria-label="Vous êtes ici"><span class="pulse"></span><span class="dot"></span></div>',
-                    iconSize: [34, 34],
-                    iconAnchor: [17, 17]
-                })
-            }).addTo(map).bindPopup("Vous êtes ici");
+                icon: createUserPositionIcon()
+            }).addTo(map).bindPopup('<span class="marker-popup">Vous êtes ici</span>');
         }, () => {
             showToast("Géolocalisation refusée : impossible de calculer le départ automatiquement.", 'error');
         });
@@ -755,6 +728,10 @@
             // Nettoyage si une recherche a déjà été faite
             if (routingControlDirect) map.removeControl(routingControlDirect);
             if (routingControlSafe) map.removeControl(routingControlSafe);
+            if (destinationMarker) map.removeLayer(destinationMarker);
+            destinationMarker = L.marker(destLatLng, {
+                icon: createDestinationIcon()
+            }).addTo(map).bindPopup('<span class="marker-popup destination">Arrivée</span>');
 
             // Récupération des zones rouges / incidents, avec filtre 2h et fallback démo
             const riskResult = await getRiskZones(userPos, destLatLng);
