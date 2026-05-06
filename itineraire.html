@@ -301,42 +301,6 @@
                     width: 100%;
                 }
             }
-            input-wrapper {
-                position: relative; /* Très important pour que la liste reste sous le champ */
-            }
-
-            .suggestions-container {
-                display: none; /* Caché par défaut */
-                position: absolute;
-                top: 100%;
-                left: 0;
-                width: 100%;
-                max-height: 200px;
-                overflow-y: auto;
-                background-color: var(--bg-card); /* FOND OPAQUE OBLIGATOIRE */
-                z-index: 9999; /* Le chiffre magique pour passer par-dessus TOUT le reste */
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-                margin-top: 5px;
-            }
-
-            .suggestion-item {
-                padding: 12px;
-                font-size: 0.9rem;
-                color: var(--text-primary);
-                cursor: pointer;
-                border-bottom: 1px solid var(--border);
-            }
-
-            .suggestion-item:last-child {
-                border-bottom: none;
-            }
-
-            .suggestion-item:hover {
-                background-color: var(--bg-input);
-                color: var(--pink-light);
-            }
         </style>
     </head>
     <body>
@@ -344,19 +308,9 @@
     <div class="page-itineraire">
         
         <div class="search-box">
-            <div class="input-wrapper">
-                <label>Départ</label>
-                <input type="text" id="depart" placeholder="Ma position actuelle (ou tape une adresse)..." autocomplete="off" />
-                <div id="suggestions-depart" class="suggestions-container"></div>
-            </div>
-            
-            <div class="input-wrapper" style="margin-top: 10px;">
-                <label>Arrivée</label>
-                <input type="text" id="destination" placeholder="Où vas-tu ?" autocomplete="off" />
-                <div id="suggestions-destination" class="suggestions-container"></div>
-            </div>
+            <label>Où vas-tu ?</label>
+            <input type="text" id="destination" placeholder="Adresse, monument, ville..." />
         </div>
-
         <p class="search-help">Recherche une adresse, un restaurant, un commerce ou un nom d’établissement. Le trajet est une approximation piétonne pour prototype web.</p>
         <div class="search-results" id="search-results"></div>
 
@@ -1007,97 +961,6 @@
             }];
 
             calculerItineraires(currentDestination, { reason: 'simulation' });
-        });
-                // Fonction pour activer l'autocomplétion sur un champ précis
-        function activerSuggestions(inputId, suggestionsId) {
-            const input = document.getElementById(inputId);
-            const container = document.getElementById(suggestionsId);
-            let timeout = null;
-
-            // Quand on tape dans le champ
-            input.addEventListener('input', (e) => {
-                clearTimeout(timeout);
-                const query = e.target.value;
-
-                // Si on a moins de 3 lettres, on cache la liste
-                if (query.length < 3) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                // On attend 300ms après la dernière frappe pour ne pas spammer l'API
-                timeout = setTimeout(async () => {
-                    try {
-                        // Recherche via Nominatim (On limite à 5 résultats)
-                        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
-                        const data = await resp.json();
-
-                        // On vide la liste précédente
-                        container.innerHTML = '';
-
-                        if (data.length > 0) {
-                            data.forEach(lieu => {
-                                const div = document.createElement('div');
-                                div.className = 'suggestion-item';
-                                // On simplifie un peu le nom affiché
-                                div.innerText = lieu.display_name.split(',').slice(0, 3).join(','); 
-                                
-                                // Quand on clique sur une suggestion
-                                div.addEventListener('click', () => {
-                                    input.value = div.innerText; // Remplir le champ
-                                    // On sauvegarde les coordonnées directement dans le champ HTML (dataset)
-                                    input.dataset.lat = lieu.lat;
-                                    input.dataset.lon = lieu.lon;
-                                    container.style.display = 'none'; // Cacher la liste
-                                });
-
-                                container.appendChild(div);
-                            });
-                            container.style.display = 'block';
-                        } else {
-                            container.style.display = 'none';
-                        }
-                    } catch (error) {
-                        console.error("Erreur de recherche:", error);
-                    }
-                }, 300);
-            });
-
-            // Cacher la liste si on clique ailleurs sur la page
-            document.addEventListener('click', (e) => {
-                if (e.target !== input && e.target !== container) {
-                    container.style.display = 'none';
-                }
-            });
-        }
-
-        // 1. On active les suggestions pour les deux champs !
-        activerSuggestions('depart', 'suggestions-depart');
-        activerSuggestions('destination', 'suggestions-destination');
-
-
-        // 2. Bouton "Calculer l'itinéraire" ou touche Entrée
-        // Maintenant qu'on a les coordonnées stockées, c'est super facile :
-        document.getElementById('destination').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const inputDepart = document.getElementById('depart');
-                const inputDest = document.getElementById('destination');
-
-                let ptDepart = userPos; // GPS par défaut
-
-                // Si l'utilisatrice a choisi une suggestion pour le départ
-                if (inputDepart.dataset.lat && inputDepart.dataset.lon) {
-                    ptDepart = L.latLng(inputDepart.dataset.lat, inputDepart.dataset.lon);
-                }
-
-                // Si l'utilisatrice a choisi une suggestion pour l'arrivée
-                if (inputDest.dataset.lat && inputDest.dataset.lon) {
-                    const ptArrivee = L.latLng(inputDest.dataset.lat, inputDest.dataset.lon);
-                    calculerItineraires(ptDepart, ptArrivee); // On lance ta fonction Leaflet
-                } else {
-                    alert("Merci de sélectionner une destination dans la liste des suggestions !");
-                }
-            }
         });
     </script>
 
