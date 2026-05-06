@@ -301,7 +301,7 @@
                     width: 100%;
                 }
             }
-            .input-wrapper {
+            input-wrapper {
                 position: relative; /* Très important pour que la liste reste sous le champ */
             }
 
@@ -762,14 +762,7 @@
         }
 
         // 2. Calcul des deux itinéraires
-        async function calculerItineraires(startLatLng, destLatLng, options = {}) {
-            if (!startLatLng) {
-                return showToast("Position de départ introuvable.", 'error');
-            }
-
-            userPos = L.latLng(startLatLng);
-            currentDestination = destLatLng;
-
+        async function calculerItineraires(destLatLng, options = {}) {
             if (!userPos) return showToast("Position GPS introuvable. Autorise la localisation pour calculer le départ.", 'error');
             currentDestination = destLatLng;
             setGuidanceMode(false);
@@ -907,7 +900,7 @@
                 btn.addEventListener('click', () => {
                     document.getElementById('destination').value = label;
                     searchResultsEl.classList.remove('visible');
-                    calculerItineraires(userPos, L.latLng(Number(item.lat), Number(item.lon)));
+                    calculerItineraires(L.latLng(Number(item.lat), Number(item.lon)));
                 });
                 searchResultsEl.appendChild(btn);
             });
@@ -1051,26 +1044,11 @@
                                 
                                 // Quand on clique sur une suggestion
                                 div.addEventListener('click', () => {
-                                    input.value = div.innerText;
+                                    input.value = div.innerText; // Remplir le champ
+                                    // On sauvegarde les coordonnées directement dans le champ HTML (dataset)
                                     input.dataset.lat = lieu.lat;
                                     input.dataset.lon = lieu.lon;
-                                    container.style.display = 'none';
-
-                                    if (inputId === 'destination') {
-                                        const inputDepart = document.getElementById('depart');
-
-                                        let ptDepart = userPos;
-
-                                        if (inputDepart.dataset.lat && inputDepart.dataset.lon) {GI
-                                            ptDepart = L.latLng(
-                                                Number(inputDepart.dataset.lat),
-                                                Number(inputDepart.dataset.lon)
-                                            );
-                                        }
-
-                                        const ptArrivee = L.latLng(Number(lieu.lat), Number(lieu.lon));
-                                        calculerItineraires(ptDepart, ptArrivee);
-                                    }
+                                    container.style.display = 'none'; // Cacher la liste
                                 });
 
                                 container.appendChild(div);
