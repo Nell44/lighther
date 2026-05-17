@@ -519,6 +519,7 @@ L.tileLayer(
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 ).addTo(carte);
 generateHexGrid();
+refreshHexagonColors();
 
 function createUserPositionIcon(){
 return L.divIcon({
@@ -669,12 +670,13 @@ const hexagons = h3.polygonToCells(polygon, 9);
     });
 });
 
+            
             /* hexagone sélectionné */
-            hex.setStyle({
-    color: visual.couleur,
-    fillColor: visual.couleur,
-    fillOpacity: 0.35,
-    weight: 1.5
+hex.setStyle({
+    color:"#ffffff",
+    fillColor:"#D946EF",
+    fillOpacity:0.35,
+    weight:1.5
 });
 
         });
@@ -814,7 +816,12 @@ navigator.geolocation.getCurrentPosition(pos => {
 const lat = pos.coords.latitude;
 const lng = pos.coords.longitude;
 
-carte.setView([lat,lng],14);
+setTimeout(() => {
+
+    carte.setView([lat,lng],14);
+
+}, 200);
+
 
 L.marker([lat,lng],{ icon:createUserPositionIcon() })
 .addTo(carte)
