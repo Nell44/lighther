@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
-
+<script src="https://unpkg.com/h3-js"></script>
 <style>
 *,
 *::before,
@@ -87,6 +87,15 @@ inset:0;
 pointer-events:none;
 z-index:0;
 overflow:hidden;
+}
+
+.page-hint{
+margin-top:14px;
+font-size:.82rem;
+color:var(--text-muted);
+line-height:1.4;
+max-width:680px;
+margin-inline:auto;
 }
 
 .star{
@@ -459,6 +468,10 @@ starsEl.appendChild(s);
 /* carte */
 const carte = L.map('carte').setView([48.8566,2.3522],13);
 const signalementsLayer = L.layerGroup().addTo(carte);
+const hexLayer = L.layerGroup().addTo(carte);
+let selectedHexagon = null;
+const hexagonsMap = new Map();
+let currentSignalements = [];
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const MIN_RECENT_FOR_DEMO = 3;
 const DEMO_SIGNALEMENTS = [
@@ -505,6 +518,7 @@ demoLocal:true
 L.tileLayer(
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 ).addTo(carte);
+generateHexGrid();
 
 function createUserPositionIcon(){
 return L.divIcon({
@@ -518,7 +532,7 @@ popupAnchor:[0,-16]
 
 function escapeHtml(value){
 return String(value ?? '')
-.replaceAll('&','&amp;')
+.replace(/&/g,'&amp;')
 .replaceAll('<','&lt;')
 .replaceAll('>','&gt;')
 .replaceAll('"','&quot;')
@@ -603,6 +617,120 @@ alert.classList.add('visible');
 }
 
 /* signalements firebase */
+
+function generateHexGrid(){
+
+    hexLayer.clearLayers();
+    hexagonsMap.clear();
+
+    const bounds = carte.getBounds();
+
+    const polygon = [[
+    [bounds.getSouth(), bounds.getWest()],
+    [bounds.getSouth(), bounds.getEast()],
+    [bounds.getNorth(), bounds.getEast()],
+    [bounds.getNorth(), bounds.getWest()],
+    [bounds.getSouth(), bounds.getWest()]
+]];
+
+const hexagons = h3.polygonToCells(polygon, 9);
+
+
+    hexagons.forEach(h3Index => {
+
+        const boundary = h3.cellToBoundary(h3Index);
+
+        const coords = boundary.map(coord => [
+            coord[0],
+            coord[1]
+        ]);
+
+        const hex = L.polygon(coords,{
+    color:"transparent",
+    fillColor:"transparent",
+    weight:0,
+    fillOpacity:0
+});
+
+        /* clic sur un hexagone */
+        hex.on('click',()=>{
+
+            selectedHexagon = h3Index;
+
+            console.log("Hexagone sélectionné :", h3Index);
+
+            /* reset visuel */
+            hexagonsMap.forEach(h=>{
+    h.setStyle({
+        color:"transparent",
+        fillColor:"transparent",
+        weight:0,
+        fillOpacity:0
+    });
+});
+
+            /* hexagone sélectionné */
+            hex.setStyle({
+    color: visual.couleur,
+    fillColor: visual.couleur,
+    fillOpacity: 0.35,
+    weight: 1.5
+});
+
+        });
+
+        hex.addTo(hexLayer);
+
+        hexagonsMap.set(h3Index, hex);
+
+    });
+
+}
+
+function refreshHexagonColors(){
+
+    /* reset */
+    hexagonsMap.forEach(hex => {
+
+        hex.setStyle({
+            color:"transparent",
+            fillColor:"transparent",
+            weight:0,
+            fillOpacity:0
+        });
+
+    });
+
+    /* recolor */
+    currentSignalements.forEach(d => {
+
+        const visual = getSignalementVisual(d);
+
+        const lat = Number(d.lat);
+        const lng = Number(d.lng);
+
+        const h3Index = h3.latLngToCell(lat, lng, 9);
+
+        const hex = hexagonsMap.get(h3Index);
+
+        if(hex){
+
+            hex.setStyle({
+                color: visual.couleur,
+                fillColor: visual.couleur,
+                fillOpacity: 0.45,
+                weight: 2
+            });
+
+            hex.bindPopup(buildPopup(d, visual));
+
+        }
+
+    });
+
+}
+
+
 onSnapshot(collection(db,'signalements'), (snap)=>{
 
 signalementsLayer.clearLayers();
@@ -623,6 +751,7 @@ allSignalements = DEMO_SIGNALEMENTS;
 const recentSignalements = allSignalements.filter(isRecent);
 const useRecentOnly = recentSignalements.length >= MIN_RECENT_FOR_DEMO;
 const signalementsToDisplay = useRecentOnly ? recentSignalements : allSignalements;
+currentSignalements = signalementsToDisplay;
 const legendNote = document.getElementById('legend-note');
 legendNote.textContent = usingDemoData
 ? 'Mode démo : données locales affichées car Firestore est vide.'
@@ -634,20 +763,30 @@ updateIncidentAlert(signalementsToDisplay);
 signalementsToDisplay.forEach(d => {
 
 const visual = getSignalementVisual(d);
+const lat = Number(d.lat);
+const lng = Number(d.lng);
 
-L.circle([Number(d.lat),Number(d.lng)],{
-color:visual.couleur,
-fillColor:visual.couleur,
-fillOpacity:.85,
-radius:150,
-weight:3
-})
-.addTo(signalementsLayer)
-.bindPopup(buildPopup(d, visual));
+const h3Index = h3.latLngToCell(lat, lng, 9);
+
+const hex = hexagonsMap.get(h3Index);
+
+if(hex){
+
+    hex.setStyle({
+        color: visual.couleur,
+        fillColor: visual.couleur,
+        fillOpacity: 0.45,
+        weight: 2
+    });
+
+    hex.bindPopup(buildPopup(d, visual));
+
+}
 
 });
 
 }, (error)=>{
+
 
 console.error("Erreur Firebase :", error);
 signalementsLayer.clearLayers();
@@ -662,11 +801,12 @@ weight:3
 })
 .addTo(signalementsLayer)
 .bindPopup(buildPopup(d, visual));
-});
+})
 document.getElementById('legend-note').textContent = 'Mode démo : Firestore indisponible, données locales affichées.';
 updateIncidentAlert(DEMO_SIGNALEMENTS);
 
 });
+
 
 /* géolocalisation */
 navigator.geolocation.getCurrentPosition(pos => {
@@ -696,20 +836,52 @@ window.addEventListener('resize', ()=>{
 carte.invalidateSize();
 });
 
+carte.on('moveend', () => {
 
-  const locateBtn = document.getElementById("locate-btn");
+    generateHexGrid();
+
+    refreshHexagonColors();
+
+});
+
+
+let userMarker = null;
+
+const locateBtn = document.getElementById("locate-btn");
 
 if (locateBtn) {
-  locateBtn.addEventListener("click", () => {
-    navigator.geolocation.getCurrentPosition(pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
 
-      carte.setView([lat, lng], 16);
-    }, () => {
-      alert("Impossible d'obtenir votre position");
+    locateBtn.addEventListener("click", () => {
+
+        navigator.geolocation.getCurrentPosition(pos => {
+
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+
+            carte.setView([lat, lng], 16);
+
+            if(userMarker){
+                carte.removeLayer(userMarker);
+            }
+
+            userMarker = L.marker(
+                [lat, lng],
+                { icon:createUserPositionIcon() }
+            )
+            .addTo(carte)
+            .bindPopup("Vous êtes ici")
+            .openPopup();
+
+        }, error => {
+
+            console.error(error);
+
+            alert("Impossible d'obtenir votre position");
+
+        });
+
     });
-  });
+
 }
 
 </script>
