@@ -811,27 +811,7 @@ updateIncidentAlert(DEMO_SIGNALEMENTS);
 
 
 /* géolocalisation */
-navigator.geolocation.getCurrentPosition(pos => {
 
-const lat = pos.coords.latitude;
-const lng = pos.coords.longitude;
-
-setTimeout(() => {
-
-    carte.setView([lat,lng],14);
-
-}, 200);
-
-
-L.marker([lat,lng],{ icon:createUserPositionIcon() })
-.addTo(carte)
-.bindPopup('<span class="marker-popup">Vous êtes ici</span>');
-
-}, ()=>{
-
-console.warn("Géolocalisation refusée");
-
-});
 
 
 /* refresh leaflet responsive */
@@ -854,6 +834,50 @@ carte.on('moveend', () => {
 
 let userMarker = null;
 
+function afficherPositionUtilisateur(lat, lng, zoom = 16) {
+
+    carte.setView([lat, lng], zoom);
+
+    if (userMarker) {
+        carte.removeLayer(userMarker);
+    }
+
+    userMarker = L.marker([lat, lng], {
+        icon: createUserPositionIcon()
+    })
+    .addTo(carte)
+    .bindPopup('<span class="marker-popup">Vous êtes ici</span>')
+    .openPopup();
+}
+
+/* géolocalisation automatique */
+if ("geolocation" in navigator) {
+
+    navigator.geolocation.getCurrentPosition(pos => {
+
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        setTimeout(() => {
+            afficherPositionUtilisateur(lat, lng, 14);
+        }, 300);
+
+    }, error => {
+
+        console.error("Erreur géolocalisation :", error);
+        alert("Localisation impossible. Vérifie que tu as autorisé la position dans le navigateur.");
+
+    }, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    });
+
+} else {
+    alert("La géolocalisation n'est pas supportée par ce navigateur.");
+}
+
+/* bouton recentrer */
 const locateBtn = document.getElementById("locate-btn");
 
 if (locateBtn) {
@@ -865,26 +889,17 @@ if (locateBtn) {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
 
-            carte.setView([lat, lng], 16);
-
-            if(userMarker){
-                carte.removeLayer(userMarker);
-            }
-
-            userMarker = L.marker(
-                [lat, lng],
-                { icon:createUserPositionIcon() }
-            )
-            .addTo(carte)
-            .bindPopup("Vous êtes ici")
-            .openPopup();
+            afficherPositionUtilisateur(lat, lng, 16);
 
         }, error => {
 
-            console.error(error);
+            console.error("Erreur bouton localisation :", error);
+            alert("Impossible d'obtenir ta position. Vérifie l'autorisation de localisation.");
 
-            alert("Impossible d'obtenir votre position");
-
+        }, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
         });
 
     });
