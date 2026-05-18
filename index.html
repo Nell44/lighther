@@ -467,6 +467,18 @@ starsEl.appendChild(s);
 
 /* carte */
 const carte = L.map('carte').setView([48.8566,2.3522],13);
+
+/* Activer le double-clic pour signaler à distance vers la page de Coumba */
+carte.doubleClickZoom.disable(); // On désactive le zoom au double clic
+
+carte.on('dblclick', function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    
+    // On redirige vers signalement.html en ajoutant les coordonnées dans l'URL
+    window.location.href = `signalement.html?lat=${lat}&lng=${lng}`;
+});
+
 const signalementsLayer = L.layerGroup().addTo(carte);
 const hexLayer = L.layerGroup().addTo(carte);
 let selectedHexagon = null;
@@ -596,6 +608,9 @@ return `
 <div class="popup-signalement">
 <strong>Signalement ${escapeHtml(getTypeLabel(d.typeSignalement || d.type))}</strong>
 <p><b>Score SS :</b> ${escapeHtml(visual.scoreLabel)}/10 - ${escapeHtml(visual.label)}</p>
+
+${d.nbVotes ? `<p><b>Nombre d'évaluations :</b> ${escapeHtml(d.nbVotes)}</p>` : ''}
+
 <p><b>Critères :</b> éclairage ${escapeHtml(d.eclairage ?? 'N/A')}/10, affluence ${escapeHtml(d.affluence ?? 'N/A')}/10</p>
 <p><b>Incidents :</b> ${escapeHtml(d.incidents ?? 'N/A')}/10 · sentiment ${escapeHtml(d.sentiment ?? 'N/A')}/10</p>
 ${d.ticketMunicipalSimule ? `<p><b>Ticket municipal simulé :</b> ${escapeHtml(getMunicipalStatusLabel(d.statutTicketMunicipal))}</p>` : ''}
