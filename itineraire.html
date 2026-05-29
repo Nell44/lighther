@@ -7,59 +7,59 @@
 
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-        
+            
         <link rel="stylesheet" href="style.css" />
         <script src="https://unpkg.com/h3-js"></script>
         <style>
 
             .app-toast.success{
-background:linear-gradient(135deg,#D946EF,#A21CAF);
-color:white;
-}
+                background:linear-gradient(135deg,#D946EF,#A21CAF);
+                color:white;
+            }
 
             #locate-btn{
-position:fixed;
+                position:fixed;
 
-bottom:50px;
-right:30px;
+                bottom:50px;
+                right:30px;
 
-z-index:9999;
+                z-index:9999;
 
-width:52px;
-height:52px;
+                width:52px;
+                height:52px;
 
-border:none;
-border-radius:50%;
+                border:none;
+                border-radius:50%;
 
-background:white;
-color:black;
+                background:white;
+                color:black;
 
-font-size:22px;
+                font-size:22px;
 
-cursor:pointer;
+                cursor:pointer;
 
-box-shadow:0 4px 14px rgba(0,0,0,.35);
+                box-shadow:0 4px 14px rgba(0,0,0,.35);
 
-transition:.2s;
-}
+                transition:.2s;
+            }
 
-#locate-btn:hover{
-transform:scale(1.08);
-}
+            #locate-btn:hover{
+                transform:scale(1.08);
+            }
 
-@media (max-width:768px){
+            @media (max-width:768px){
 
-#locate-btn{
-bottom:50px;
-right:14px;
+                #locate-btn{
+                    bottom:50px;
+                    right:14px;
 
-width:46px;
-height:46px;
+                    width:46px;
+                    height:46px;
 
-font-size:20px;
-}
+                    font-size:20px;
+                }
 
-}
+            }
             .route-alert {
                 display: none;
                 margin-bottom: 12px;
@@ -355,548 +355,594 @@ font-size:20px;
     </head>
     <body>
 
-    <div class="page-itineraire">
-        
-        <div class="search-box">
-            <label>Où vas-tu ?</label>
-            <input type="text" id="destination" placeholder="Adresse, monument, ville..." />
-        </div>
-        <p class="search-help">Recherche une adresse, un restaurant, un commerce ou un nom d’établissement. Le trajet est une approximation piétonne pour prototype web.</p>
-        <div class="search-results" id="search-results"></div>
+        <div class="page-itineraire">
+            
+            <div class="search-box">
+                <label>D'où vas-tu ??</label>
+                <input type="text" id="depart" placeholder="Votre position actuelle, adresse..." />
+            </div>
+            
+            <div class="search-box" style="margin-top: 10px;">
+                <label>Où vas-tu ?</label>
+                <input type="text" id="destination" placeholder="Adresse, monument, ville..." />
+            </div>
+            <p class="search-help">Recherche une adresse, un restaurant, un commerce ou un nom d’établissement. Le trajet est une approximation piétonne pour prototype web.</p>
+            <div class="search-results" id="search-results"></div>
 
-        <div id="map-itineraire"></div>
-        <!-- bouton recentrer -->
-                <button id="locate-btn">📍</button>
+            <div id="map-itineraire"></div>
+            <button id="locate-btn">📍</button>
 
-        <button class="panel-toggle panel-open" id="open-route-panel" type="button">Voir les options</button>
+            <button class="panel-toggle panel-open" id="open-route-panel" type="button">Voir les options</button>
 
-        <div class="info-panel" id="info-panel" style="display: none;">
-            <div class="carte-info">
-                <div class="guidance-summary" id="guidance-summary">
-                    <div>
-                        <strong id="guidance-title">Guidage actif</strong>
-                        <span id="guidance-meta">Durée estimée à pied : -- · SS --/10</span>
-                    </div>
-                    <button class="btn-secondary" id="edit-route" type="button">Voir les options</button>
-                </div>
-
-                <div id="route-options">
-                    <div class="panel-head">
-                        <strong>Options de trajet</strong>
-                        <button class="panel-toggle panel-close" id="close-route-panel" type="button" aria-label="Réduire les options">×</button>
-                    </div>
-                    <div class="route-alert" id="route-alert"></div>
-                    <div class="route-legend">
-                        <span><i style="background:#16a34a"></i>Trajet à pied sécurisé</span>
-                        <span><i style="background:#475569"></i>Trajet à pied le plus court</span>
+            <div class="info-panel" id="info-panel" style="display: none;">
+                <div class="carte-info">
+                    <div class="guidance-summary" id="guidance-summary">
+                        <div>
+                            <strong id="guidance-title">Guidage actif</strong>
+                            <span id="guidance-meta">Durée estimée à pied : -- · SS --/10</span>
+                        </div>
+                        <button class="btn-secondary" id="edit-route" type="button">Voir les options</button>
                     </div>
 
-                    <div class="route-choices" role="group" aria-label="Choix d'itinéraire">
-                        <button class="route-choice active" id="choice-safe" type="button" data-route="safe">
-                            <span class="choice-title">Trajet à pied sécurisé</span>
-                            <span class="choice-meta">
-                                <span>Durée estimée à pied : <b id="time-safe">-- min</b></span>
-                                <span>Distance : <span id="distance-safe">-- km</span></span>
-                                <span>SS moyen : <span id="score-safe">--/10</span></span>
-                                <span>Zones rouges évitées : <span id="avoided-safe">--</span></span>
-                            </span>
-                        </button>
+                    <div id="route-options">
+                        <div class="panel-head">
+                            <strong>Options de trajet</strong>
+                            <button class="panel-toggle panel-close" id="close-route-panel" type="button" aria-label="Réduire les options">×</button>
+                        </div>
+                        <div class="route-alert" id="route-alert"></div>
+                        <div class="route-legend">
+                            <span><i style="background:#16a34a"></i>Trajet à pied sécurisé</span>
+                            <span><i style="background:#475569"></i>Trajet à pied le plus court</span>
+                        </div>
 
-                        <button class="route-choice" id="choice-direct" type="button" data-route="direct">
-                            <span class="choice-title">Trajet à pied le plus court</span>
-                            <span class="choice-meta">
-                                <span>Durée estimée à pied : <b id="time-direct">-- min</b></span>
-                                <span>Distance : <span id="distance-direct">-- km</span></span>
-                                <span>SS moyen : <span id="score-direct">--/10</span></span>
-                                <span>Zones rouges traversées : <span id="crossed-direct">--</span></span>
-                            </span>
-                        </button>
-                    </div>
+                        <div class="route-choices" role="group" aria-label="Choix d'itinéraire">
+                            <button class="route-choice active" id="choice-safe" type="button" data-route="safe">
+                                <span class="choice-title">Trajet à pied sécurisé</span>
+                                <span class="choice-meta">
+                                    <span>Durée estimée à pied : <b id="time-safe">-- min</b></span>
+                                    <span>Distance : <span id="distance-safe">-- km</span></span>
+                                    <span>SS moyen : <span id="score-safe">--/10</span></span>
+                                    <span>Zones rouges évitées : <span id="avoided-safe">--</span></span>
+                                </span>
+                            </button>
 
-                    <div class="route-actions">
-                        <button class="btn-principal" id="start-guidage">Lancer le guidage</button>
-                        <button class="btn-secondary" id="simulate-incident" type="button">Simuler un incident critique à moins de 200 m</button>
+                            <button class="route-choice" id="choice-direct" type="button" data-route="direct">
+                                <span class="choice-title">Trajet à pied le plus court</span>
+                                <span class="choice-meta">
+                                    <span>Durée estimée à pied : <b id="time-direct">-- min</b></span>
+                                    <span>Distance : <span id="distance-direct">-- km</span></span>
+                                    <span>SS moyen : <span id="score-direct">--/10</span></span>
+                                    <span>Zones rouges traversées : <span id="crossed-direct">--</span></span>
+                                </span>
+                            </button>
+                        </div>
+
+                        <div class="route-actions">
+                            <button class="btn-principal" id="start-guidage">Lancer le guidage</button>
+                            <button class="btn-secondary" id="simulate-incident" type="button">Simuler un incident critique à moins de 200 m</button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <nav>
+                <a href="index.html">Carte</a>
+                <a href="signalement.html">Signaler</a>
+                <a href="itineraire.html">Itinéraire</a>
+                <a href="sos.html">SOS</a>
+                <a href="profil.html">Profil</a>
+            </nav>
         </div>
 
-        <nav>
-            <a href="index.html">Carte</a>
-            <a href="signalement.html">Signaler</a>
-            <a href="itineraire.html">Itinéraire</a>
-            <a href="sos.html">SOS</a>
-            <a href="profil.html">Profil</a>
-        </nav>
-    </div>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+        <script type="module">
+            import { auth, db } from './firebase-config.js';
+            import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+            import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-    <script type="module">
-      import { auth, db } from './firebase-config.js';
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+            onAuthStateChanged(auth, user => {
+                if (!user) window.location.href = 'auth.html';
+            });
 
-onAuthStateChanged(auth, user => {
-    if (!user) window.location.href = 'auth.html';
-});
+            let map = L.map('map-itineraire', { zoomControl: false }).setView([48.8566, 2.3522], 13);
+            let userPos = null;
+            let startMarker = null; // Ajouté pour gérer le marqueur personnalisé de départ si l'utilisateur choisit une adresse
+            let destinationMarker = null;
+            let routingControlDirect = null;
+            let routingControlSafe = null;
+            let currentDestination = null;
+            let currentDepart = null; // Ajouté pour stocker la coordonnée de départ sélectionnée
+            let selectedRoute = 'safe';
+            let activeRiskZones = [];
+            let virtualRiskZones = [];
+            let lastRouteStats = { safe: null, direct: null };
+            let guidanceActive = false;
+            let panelCollapsed = false;
 
-let map = L.map('map-itineraire', { zoomControl: false }).setView([48.8566, 2.3522], 13);
-let userPos = null;
-let destinationMarker = null;
-let routingControlDirect = null;
-let routingControlSafe = null;
-let currentDestination = null;
-let selectedRoute = 'safe';
-let activeRiskZones = [];
-let virtualRiskZones = [];
-let lastRouteStats = { safe: null, direct: null };
-let guidanceActive = false;
-let panelCollapsed = false;
+            const riskLayer = L.layerGroup().addTo(map);
+            const hexLayer = L.layerGroup().addTo(map);
+            const hexagonsMap = new Map();
 
-const riskLayer = L.layerGroup().addTo(map);
-const hexLayer = L.layerGroup().addTo(map);
-const hexagonsMap = new Map();
+            const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+            const MIN_RECENT_RISKS_FOR_DEMO = 2;
+            const ROUTE_RISK_RADIUS_M = 220;
+            const RECALC_TRIGGER_RADIUS_M = 200;
+            const WALKING_SPEED_KMH = 4.8;
+            const searchResultsEl = document.getElementById('search-results');
+            let searchTimer = null;
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const MIN_RECENT_RISKS_FOR_DEMO = 2;
-const ROUTE_RISK_RADIUS_M = 220;
-const RECALC_TRIGGER_RADIUS_M = 200;
-const WALKING_SPEED_KMH = 4.8;
-const searchResultsEl = document.getElementById('search-results');
-let searchTimer = null;
+            // GESTION DYNAMIQUE JOUR / NUIT
+            // GESTION JOUR / NUIT SELON LE CHOIX UTILISATEUR
+            const modeCarte = localStorage.getItem('modeCarte') || 'jour';
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            const tileUrl = modeCarte === 'nuit'
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-map.whenReady(() => {
-    generateHexGrid();
-    refreshHexagonColors(activeRiskZones);
-});
+            L.tileLayer(tileUrl, {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+            }).addTo(map);
 
-function createUserPositionIcon() {
-    return L.divIcon({
-        className: '',
-        html: '<div class="user-position-marker" aria-label="Vous êtes ici"><span class="pulse"></span><span class="dot"></span></div>',
-        iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -16]
-    });
-}
+            map.whenReady(() => {
+                generateHexGrid();
+                refreshHexagonColors(activeRiskZones);
+            });
 
-function createDestinationIcon() {
-    return L.divIcon({
-        className: '',
-        html: '<div class="destination-position-marker" aria-label="Destination"><span class="pulse"></span><span class="dot"></span></div>',
-        iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -16]
-    });
-}
+            function createUserPositionIcon() {
+                return L.divIcon({
+                    className: '',
+                    html: '<div class="user-position-marker" aria-label="Vous êtes ici"><span class="pulse"></span><span class="dot"></span></div>',
+                    iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -16]
+                });
+            }
 
-// 1. GPS
-let watchId = null;
-let positionInitialized = false;
+            function createDestinationIcon() {
+                return L.divIcon({
+                    className: '',
+                    html: '<div class="destination-position-marker" aria-label="Destination"><span class="pulse"></span><span class="dot"></span></div>',
+                    iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -16]
+                });
+            }
 
-watchId = navigator.geolocation.watchPosition(pos => {
-    userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
-    if (!positionInitialized) {
-        positionInitialized = true;
-        map.setView(userPos, 15);
-        L.marker(userPos, { icon: createUserPositionIcon() })
-            .addTo(map)
-            .bindPopup('<span class="marker-popup">Vous êtes ici</span>');
-        generateHexGrid();
-        refreshHexagonColors(activeRiskZones);
-    }
-}, err => {
-    if (err.code === 1) showToast("Géolocalisation refusée.", 'error');
-    else if (err.code === 2) showToast("Position GPS introuvable.", 'error');
-    else showToast("Délai de géolocalisation dépassé.", 'error');
-}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+            // 1. GPS
+            let watchId = null;
+            let positionInitialized = false;
 
-window.addEventListener('beforeunload', () => {
-    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-});
+            watchId = navigator.geolocation.watchPosition(pos => {
+                userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                if (!currentDepart) {
+                    currentDepart = userPos; // Par défaut, le point de départ est la géolocalisation
+                    document.getElementById('depart').value = "Ma position actuelle";
+                }
+                if (!positionInitialized) {
+                    positionInitialized = true;
+                    map.setView(userPos, 15);
+                    L.marker(userPos, { icon: createUserPositionIcon() })
+                        .addTo(map)
+                        .bindPopup('<span class="marker-popup">Vous êtes ici</span>');
+                    generateHexGrid();
+                    refreshHexagonColors(activeRiskZones);
+                }
+            }, err => {
+                if (err.code === 1) showToast("Géolocalisation refusée.", 'error');
+                else if (err.code === 2) showToast("Position GPS introuvable.", 'error');
+                else showToast("Délai de géolocalisation dépassé.", 'error');
+            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 
-// Bouton recentrer
-const locateBtn = document.getElementById("locate-btn");
-if (locateBtn) {
-    locateBtn.addEventListener("click", () => {
-        navigator.geolocation.getCurrentPosition(pos => {
-            userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
-            map.flyTo(userPos, 16);
-            showToast("Position recentrée.", "success");
-        }, err => {
-            if (err.code === 1) showToast("Permission refusée. Autorise la localisation dans les réglages.", 'error');
-            else showToast("Impossible d'obtenir votre position.", 'error');
-        }, { enableHighAccuracy: true, timeout: 8000 });
-    });
-}
+            window.addEventListener('beforeunload', () => {
+                if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            });
 
-function getSignalementDate(d) {
-    const raw = d.createdAt || d.timestamp;
-    if (!raw) return null;
-    if (typeof raw.toDate === 'function') return raw.toDate();
-    if (raw instanceof Date) return raw;
-    const date = new Date(raw);
-    return Number.isNaN(date.getTime()) ? null : date;
-}
+            // Bouton recentrer
+            const locateBtn = document.getElementById("locate-btn");
+            if (locateBtn) {
+                locateBtn.addEventListener("click", () => {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                        currentDepart = userPos;
+                        document.getElementById('depart').value = "Ma position actuelle";
+                        map.flyTo(userPos, 16);
+                        showToast("Position recentrée.", "success");
+                        if (currentDestination) {
+                            calculerItineraires(currentDestination);
+                        }
+                    }, err => {
+                        if (err.code === 1) showToast("Permission refusée. Autorise la localisation dans les réglages.", 'error');
+                        else showToast("Impossible d'obtenir votre position.", 'error');
+                    }, { enableHighAccuracy: true, timeout: 8000 });
+                });
+            }
 
-function isRecent(d) {
-    const date = getSignalementDate(d);
-    if (!date) return false;
-    return Date.now() - date.getTime() <= TWO_HOURS_MS;
-}
+            function getSignalementDate(d) {
+                const raw = d.createdAt || d.timestamp;
+                if (!raw) return null;
+                if (typeof raw.toDate === 'function') return raw.toDate();
+                if (raw instanceof Date) return raw;
+                const date = new Date(raw);
+                return Number.isNaN(date.getTime()) ? null : date;
+            }
 
-function normalizeSignalement(d) {
-    const lat = Number(d.lat);
-    const lng = Number(d.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-    const ss = Number(d.ss);
-    const type = d.typeSignalement || d.type || 'rue_normale';
-    return { ...d, lat, lng, ss: Number.isFinite(ss) ? ss : 5, typeSignalement: type, isCritical: ss < 4 || type === 'incident' };
-}
+            function isRecent(d) {
+                const date = getSignalementDate(d);
+                if (!date) return false;
+                return Date.now() - date.getTime() <= TWO_HOURS_MS;
+            }
 
-function toXY(point, origin) {
-    const lat = point.lat ?? point[0];
-    const lng = point.lng ?? point[1];
-    const avgLat = ((lat + origin.lat) / 2) * Math.PI / 180;
-    return { x: (lng - origin.lng) * Math.cos(avgLat) * 111320, y: (lat - origin.lat) * 110540 };
-}
+            function normalizeSignalement(d) {
+                const lat = Number(d.lat);
+                const lng = Number(d.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+                const ss = Number(d.ss);
+                const type = d.typeSignalement || d.type || 'rue_normale';
+                return { ...d, lat, lng, ss: Number.isFinite(ss) ? ss : 5, typeSignalement: type, isCritical: ss < 4 || type === 'incident' };
+            }
 
-function fromXY(point, origin) {
-    const lat = origin.lat + point.y / 110540;
-    const avgLat = ((lat + origin.lat) / 2) * Math.PI / 180;
-    const lng = origin.lng + point.x / (Math.cos(avgLat) * 111320);
-    return L.latLng(lat, lng);
-}
+            function toXY(point, origin) {
+                const lat = point.lat ?? point[0];
+                const lng = point.lng ?? point[1];
+                const avgLat = ((lat + origin.lat) / 2) * Math.PI / 180;
+                return { x: (lng - origin.lng) * Math.cos(avgLat) * 111320, y: (lat - origin.lat) * 110540 };
+            }
 
-function distanceToSegment(point, start, end) {
-    const p = toXY(point, start);
-    const a = { x: 0, y: 0 };
-    const b = toXY(end, start);
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const len2 = dx * dx + dy * dy;
-    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
-    const projected = { x: a.x + t * dx, y: a.y + t * dy };
-    return { distance: Math.hypot(p.x - projected.x, p.y - projected.y), t };
-}
+            function fromXY(point, origin) {
+                const lat = origin.lat + point.y / 110540;
+                const avgLat = ((lat + origin.lat) / 2) * Math.PI / 180;
+                const lng = origin.lng + point.x / (Math.cos(avgLat) * 111320);
+                return L.latLng(lat, lng);
+            }
 
-function distanceToRoute(point, coords) {
-    if (!coords || coords.length < 2) return Infinity;
-    let min = Infinity;
-    for (let i = 0; i < coords.length - 1; i++) {
-        const d = distanceToSegment(point, coords[i], coords[i + 1]).distance;
-        if (d < min) min = d;
-    }
-    return min;
-}
+            // Correction ici pour prendre dynamiquement le départ choisi plutôt que de forcer start (qui cassait en mode XY)
+            function distanceToSegment(point, startPoint, endPoint) {
+                const p = toXY(point, startPoint);
+                const a = { x: 0, y: 0 };
+                const b = toXY(endPoint, startPoint);
+                const dx = b.x - a.x, dy = b.y - a.y;
+                const len2 = dx * dx + dy * dy;
+                const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+                const projected = { x: a.x + t * dx, y: a.y + t * dy };
+                return { distance: Math.hypot(p.x - projected.x, p.y - projected.y), t };
+            }
 
-function buildDetourPoint(zone, start, end) {
-    const zonePoint = L.latLng(zone.lat, zone.lng);
-    const base = distanceToSegment(zonePoint, start, end);
-    const endXY = toXY(end, start);
-    const dx = endXY.x, dy = endXY.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const normal = { x: -dy / len, y: dx / len };
-    const zoneXY = toXY(zonePoint, start);
-    const side = (zoneXY.x * normal.x + zoneXY.y * normal.y) >= 0 ? 1 : -1;
-    return fromXY({ x: dx * base.t - normal.x * side * 380, y: dy * base.t - normal.y * side * 380 }, start);
-}
+            function distanceToRoute(point, coords) {
+                if (!coords || coords.length < 2) return Infinity;
+                let min = Infinity;
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const d = distanceToSegment(point, coords[i], coords[i + 1]).distance;
+                    if (d < min) min = d;
+                }
+                return min;
+            }
 
-function formatDistance(meters) {
-    return Number.isFinite(meters) ? (meters / 1000).toFixed(1) + ' km' : '-- km';
-}
+            function buildDetourPoint(zone, startPoint, endPoint) {
+                const zonePoint = L.latLng(zone.lat, zone.lng);
+                const base = distanceToSegment(zonePoint, startPoint, endPoint);
+                const endXY = toXY(endPoint, startPoint);
+                const dx = endXY.x, dy = endXY.y;
+                const len = Math.hypot(dx, dy) || 1;
+                const normal = { x: -dy / len, y: dx / len };
+                const zoneXY = toXY(zonePoint, startPoint);
+                const side = (zoneXY.x * normal.x + zoneXY.y * normal.y) >= 0 ? 1 : -1;
+                return fromXY({ x: dx * base.t - normal.x * side * 380, y: dy * base.t - normal.y * side * 380 }, startPoint);
+            }
 
-function estimateWalkingMinutes(meters) {
-    if (!Number.isFinite(meters) || meters <= 0) return null;
-    return Math.max(1, Math.round((meters / 1000) / WALKING_SPEED_KMH * 60));
-}
+            function formatDistance(meters) {
+                return Number.isFinite(meters) ? (meters / 1000).toFixed(1) + ' km' : '-- km';
+            }
 
-function countZonesNearRoute(coords, zones, radius) {
-    return zones.filter(zone => distanceToRoute(L.latLng(zone.lat, zone.lng), coords) <= radius).length;
-}
+            function estimateWalkingMinutes(meters) {
+                if (!Number.isFinite(meters) || meters <= 0) return null;
+                return Math.max(1, Math.round((meters / 1000) / WALKING_SPEED_KMH * 60));
+            }
 
-function estimateRouteSecurity(coords, zones) {
-    const crossed = countZonesNearRoute(coords, zones, ROUTE_RISK_RADIUS_M);
-    const incidentCount = zones.filter(zone => zone.typeSignalement === 'incident' && distanceToRoute(L.latLng(zone.lat, zone.lng), coords) <= ROUTE_RISK_RADIUS_M).length;
-    return Math.round(Math.max(1, Math.min(10, 8.5 - crossed * 1.2 - incidentCount * 1.1)) * 10) / 10;
-}
+            function countZonesNearRoute(coords, zones, radius) {
+                return zones.filter(zone => distanceToRoute(L.latLng(zone.lat, zone.lng), coords) <= radius).length;
+            }
 
-function buildDemoRiskZone(start, dest) {
-    return { lat: (start.lat + dest.lat) / 2, lng: (start.lng + dest.lng) / 2, ss: 2, typeSignalement: 'incident', isCritical: true, timestamp: new Date(), demoLocal: true };
-}
+            function estimateRouteSecurity(coords, zones) {
+                const crossed = countZonesNearRoute(coords, zones, ROUTE_RISK_RADIUS_M);
+                const incidentCount = zones.filter(zone => zone.typeSignalement === 'incident' && distanceToRoute(L.latLng(zone.lat, zone.lng), coords) <= ROUTE_RISK_RADIUS_M).length;
+                return Math.round(Math.max(1, Math.min(10, 8.5 - crossed * 1.2 - incidentCount * 1.1)) * 10) / 10;
+            }
 
-async function getRiskZones(start, dest) {
-    const allZones = [];
-    try {
-        const snap = await getDocs(collection(db, "signalements"));
-        snap.forEach(doc => { const zone = normalizeSignalement(doc.data()); if (zone?.isCritical) allZones.push(zone); });
-    } catch { showToast("Signalements indisponibles, mode démo activé.", 'error'); }
-    if (allZones.length === 0) return { zones: [buildDemoRiskZone(start, dest), ...virtualRiskZones], useRecentOnly: false, usingDemoData: true };
-    const recentZones = allZones.filter(isRecent);
-    const useRecentOnly = recentZones.length >= MIN_RECENT_RISKS_FOR_DEMO;
-    return { zones: [...(useRecentOnly ? recentZones : allZones), ...virtualRiskZones], useRecentOnly, usingDemoData: false };
-}
+            function buildDemoRiskZone(startPoint, dest) {
+                return { lat: (startPoint.lat + dest.lat) / 2, lng: (startPoint.lng + dest.lng) / 2, ss: 2, typeSignalement: 'incident', isCritical: true, timestamp: new Date(), demoLocal: true };
+            }
 
-function showRouteAlert(message) {
-    const alert = document.getElementById('route-alert');
-    alert.textContent = message;
-    alert.classList.add('visible');
-}
+            async function getRiskZones(startPoint, dest) {
+                const allZones = [];
+                try {
+                    const snap = await getDocs(collection(db, "signalements"));
+                    snap.forEach(doc => { const zone = normalizeSignalement(doc.data()); if (zone?.isCritical) allZones.push(zone); });
+                } catch { showToast("Signalements indisponibles, mode démo activé.", 'error'); }
+                if (allZones.length === 0) return { zones: [buildDemoRiskZone(startPoint, dest), ...virtualRiskZones], useRecentOnly: false, usingDemoData: true };
+                const recentZones = allZones.filter(isRecent);
+                const useRecentOnly = recentZones.length >= MIN_RECENT_RISKS_FOR_DEMO;
+                return { zones: [...(useRecentOnly ? recentZones : allZones), ...virtualRiskZones], useRecentOnly, usingDemoData: false };
+            }
 
-function setSelectedRoute(route) {
-    selectedRoute = route;
-    document.querySelectorAll('.route-choice').forEach(btn => btn.classList.toggle('active', btn.dataset.route === route));
-    applyRouteVisibility();
-    if (guidanceActive) updateGuidanceSummary();
-}
+            function showRouteAlert(message) {
+                const alert = document.getElementById('route-alert');
+                alert.textContent = message;
+                alert.classList.add('visible');
+            }
 
-function updateRouteStats(kind, route, zones, avoidedBySafe = 0) {
-    const coords = route.coordinates || [];
-    const meters = route.summary.totalDistance;
-    const minutes = estimateWalkingMinutes(meters);
-    const crossed = countZonesNearRoute(coords, zones, ROUTE_RISK_RADIUS_M);
-    const score = estimateRouteSecurity(coords, zones);
-    const stats = { minutes, distance: formatDistance(meters), score, crossed, avoided: Math.max(0, avoidedBySafe) };
-    lastRouteStats[kind] = stats;
-    document.getElementById(`time-${kind}`).innerText = minutes ? minutes + ' min' : '-- min';
-    document.getElementById(`distance-${kind}`).innerText = stats.distance;
-    document.getElementById(`score-${kind}`).innerText = score + '/10';
-    if (kind === 'safe') document.getElementById('avoided-safe').innerText = stats.avoided;
-    else document.getElementById('crossed-direct').innerText = crossed;
-    if (guidanceActive && selectedRoute === kind) updateGuidanceSummary();
-}
+            function setSelectedRoute(route) {
+                selectedRoute = route;
+                document.querySelectorAll('.route-choice').forEach(btn => btn.classList.toggle('active', btn.dataset.route === route));
+                applyRouteVisibility();
+                if (guidanceActive) updateGuidanceSummary();
+            }
 
-function updateGuidanceSummary() {
-    const stats = lastRouteStats[selectedRoute];
-    const title = selectedRoute === 'safe' ? 'Trajet à pied sécurisé' : 'Trajet à pied le plus court';
-    document.getElementById('guidance-title').textContent = title;
-    document.getElementById('guidance-meta').textContent = `Durée estimée à pied : ${stats?.minutes ? stats.minutes + ' min' : '-- min'} · ${stats?.distance || '-- km'} · SS ${stats?.score ? stats.score + '/10' : '--/10'}`;
-}
+            function updateRouteStats(kind, route, zones, avoidedBySafe = 0) {
+                const coords = route.coordinates || [];
+                const meters = route.summary.totalDistance;
+                const minutes = estimateWalkingMinutes(meters);
+                const crossed = countZonesNearRoute(coords, zones, ROUTE_RISK_RADIUS_M);
+                const score = estimateRouteSecurity(coords, zones);
+                const stats = { minutes, distance: formatDistance(meters), score, crossed, avoided: Math.max(0, avoidedBySafe) };
+                lastRouteStats[kind] = stats;
+                document.getElementById(`time-${kind}`).innerText = minutes ? minutes + ' min' : '-- min';
+                document.getElementById(`distance-${kind}`).innerText = stats.distance;
+                document.getElementById(`score-${kind}`).innerText = score + '/10';
+                if (kind === 'safe') document.getElementById('avoided-safe').innerText = stats.avoided;
+                else document.getElementById('crossed-direct').innerText = crossed;
+                if (guidanceActive && selectedRoute === kind) updateGuidanceSummary();
+            }
 
-function setGuidanceMode(active) {
-    guidanceActive = active;
-    panelCollapsed = false;
-    document.getElementById('guidance-summary').classList.toggle('visible', active);
-    document.getElementById('route-options').style.display = active ? 'none' : 'block';
-    document.getElementById('info-panel').style.display = 'block';
-    document.getElementById('open-route-panel').classList.remove('visible');
-    if (active) updateGuidanceSummary();
-}
+            function updateGuidanceSummary() {
+                const stats = lastRouteStats[selectedRoute];
+                const title = selectedRoute === 'safe' ? 'Trajet à pied sécurisé' : 'Trajet à pied le plus court';
+                document.getElementById('guidance-title').textContent = title;
+                document.getElementById('guidance-meta').textContent = `Durée estimée à pied : ${stats?.minutes ? stats.minutes + ' min' : '-- min'} · ${stats?.distance || '-- km'} · SS ${stats?.score ? stats.score + '/10' : '--/10'}`;
+            }
 
-function setPanelCollapsed(collapsed) {
-    panelCollapsed = collapsed;
-    if (!currentDestination) return;
-    document.getElementById('info-panel').style.display = collapsed ? 'none' : 'block';
-    document.getElementById('open-route-panel').classList.toggle('visible', collapsed);
-}
+            function setGuidanceMode(active) {
+                guidanceActive = active;
+                panelCollapsed = false;
+                document.getElementById('guidance-summary').classList.toggle('visible', active);
+                document.getElementById('route-options').style.display = active ? 'none' : 'block';
+                document.getElementById('info-panel').style.display = 'block';
+                document.getElementById('open-route-panel').classList.remove('visible');
+                if (active) updateGuidanceSummary();
+            }
 
-function isControlOnMap(control) { return Boolean(control && control._map); }
+            function setPanelCollapsed(collapsed) {
+                panelCollapsed = collapsed;
+                if (!currentDestination) return;
+                document.getElementById('info-panel').style.display = collapsed ? 'none' : 'block';
+                document.getElementById('open-route-panel').classList.toggle('visible', collapsed);
+            }
 
-function applyRouteVisibility() {
-    if (!routingControlDirect || !routingControlSafe) return;
-    const active = selectedRoute === 'safe' ? routingControlSafe : routingControlDirect;
-    const inactive = selectedRoute === 'safe' ? routingControlDirect : routingControlSafe;
-    if (isControlOnMap(inactive)) map.removeControl(inactive);
-    if (!isControlOnMap(active)) active.addTo(map);
-}
+            function isControlOnMap(control) { return Boolean(control && control._map); }
 
+            function applyRouteVisibility() {
+                if (!routingControlDirect || !routingControlSafe) return;
+                const active = selectedRoute === 'safe' ? routingControlSafe : routingControlDirect;
+                const inactive = selectedRoute === 'safe' ? routingControlDirect : routingControlSafe;
+                if (isControlOnMap(inactive)) map.removeControl(inactive);
+                if (!isControlOnMap(active)) active.addTo(map);
+            }
 
+            function buildSafeWaypoints(startPoint, dest, zones) {
+                const candidates = zones
+                    .map(zone => ({ zone, ...distanceToSegment(L.latLng(zone.lat, zone.lng), startPoint, dest) }))
+                    .filter(item => item.distance <= ROUTE_RISK_RADIUS_M * 1.8)
+                    .sort((a, b) => a.t - b.t)
+                    .slice(0, 4);
+                return { waypoints: [startPoint, ...candidates.map(item => buildDetourPoint(item.zone, startPoint, dest)), dest], avoided: candidates.length };
+            }
 
-function buildSafeWaypoints(start, dest, zones) {
-    const candidates = zones
-        .map(zone => ({ zone, ...distanceToSegment(L.latLng(zone.lat, zone.lng), start, dest) }))
-        .filter(item => item.distance <= ROUTE_RISK_RADIUS_M * 1.8)
-        .sort((a, b) => a.t - b.t)
-        .slice(0, 4);
-    return { waypoints: [start, ...candidates.map(item => buildDetourPoint(item.zone, start, dest)), dest], avoided: candidates.length };
-}
+            // 2. Calcul des itinéraires mis à jour pour exploiter currentDepart
+            async function calculerItineraires(destLatLng, options = {}) {
+                if (!currentDepart) return showToast("Position de départ introuvable.", 'error');
+                currentDestination = destLatLng;
+                setGuidanceMode(false);
+                lastRouteStats = { safe: null, direct: null };
+                panelCollapsed = false;
+                document.getElementById('open-route-panel').classList.remove('visible');
+                let routesFound = 0;
 
-// 2. Calcul des itinéraires
-async function calculerItineraires(destLatLng, options = {}) {
-    if (!userPos) return showToast("Position GPS introuvable. Autorise la localisation.", 'error');
-    currentDestination = destLatLng;
-    setGuidanceMode(false);
-    lastRouteStats = { safe: null, direct: null };
-    panelCollapsed = false;
-    document.getElementById('open-route-panel').classList.remove('visible');
-    let routesFound = 0;
+                if (routingControlDirect) map.removeControl(routingControlDirect);
+                if (routingControlSafe) map.removeControl(routingControlSafe);
+                if (destinationMarker) map.removeLayer(destinationMarker);
+                if (startMarker) map.removeLayer(startMarker);
 
-    if (routingControlDirect) map.removeControl(routingControlDirect);
-    if (routingControlSafe) map.removeControl(routingControlSafe);
-    if (destinationMarker) map.removeLayer(destinationMarker);
+                // Si le départ n'est pas la position GPS en temps réel, on ajoute un marqueur visuel pour le départ choisi
+                if (currentDepart !== userPos) {
+                    startMarker = L.marker(currentDepart, { icon: createUserPositionIcon() })
+                        .addTo(map).bindPopup('<span class="marker-popup">Départ choisi</span>');
+                }
 
-    destinationMarker = L.marker(destLatLng, { icon: createDestinationIcon() })
-        .addTo(map).bindPopup('<span class="marker-popup destination">Arrivée</span>');
+                destinationMarker = L.marker(destLatLng, { icon: createDestinationIcon() })
+                    .addTo(map).bindPopup('<span class="marker-popup destination">Arrivée</span>');
 
-    const riskResult = await getRiskZones(userPos, destLatLng);
-    activeRiskZones = riskResult.zones;
-    generateHexGrid();
-    refreshHexagonColors(activeRiskZones);
+                const riskResult = await getRiskZones(currentDepart, destLatLng);
+                activeRiskZones = riskResult.zones;
+                generateHexGrid();
+                refreshHexagonColors(activeRiskZones);
 
-    showRouteAlert(options.reason === 'simulation'
-        ? "Simulation : incident critique détecté à moins de 200 m. L'itinéraire sûr est recalculé."
-        : riskResult.usingDemoData
-            ? "Mode démo : zone locale placée sur le trajet pour démontrer l'évitement."
-            : riskResult.useRecentOnly
-                ? "Routage basé sur les signalements critiques des 2 dernières heures."
-                : "Mode démo : données anciennes incluses (peu de signalements récents).");
+                showRouteAlert(options.reason === 'simulation'
+                    ? "Simulation : incident critique détecté à moins de 200 m. L'itinéraire sûr est recalculé."
+                    : riskResult.usingDemoData
+                        ? "Mode démo : zone locale placée sur le trajet pour démontrer l'évitement."
+                        : riskResult.useRecentOnly
+                            ? "Routage basé sur les signalements critiques des 2 dernières heures."
+                            : "Mode démo : données anciennes incluses (peu de signalements récents).");
 
-    routingControlDirect = L.Routing.control({
-        waypoints: [userPos, destLatLng],
-        lineOptions: { styles: [{ color: '#475569', opacity: 0.9, weight: 5 }] },
-        addWaypoints: false, draggableWaypoints: false, createMarker: () => null
-    }).addTo(map);
+                routingControlDirect = L.Routing.control({
+                    waypoints: [currentDepart, destLatLng],
+                    lineOptions: { styles: [{ color: '#475569', opacity: 0.9, weight: 5 }] },
+                    addWaypoints: false, draggableWaypoints: false, createMarker: () => null
+                }).addTo(map);
 
-    const safePlan = buildSafeWaypoints(userPos, destLatLng, activeRiskZones);
-    routingControlSafe = L.Routing.control({
-        waypoints: safePlan.waypoints,
-        lineOptions: { styles: [{ color: '#16a34a', opacity: 1, weight: 7 }] },
-        addWaypoints: false, createMarker: () => null
-    }).addTo(map);
+                const safePlan = buildSafeWaypoints(currentDepart, destLatLng, activeRiskZones);
+                routingControlSafe = L.Routing.control({
+                    waypoints: safePlan.waypoints,
+                    lineOptions: { styles: [{ color: '#16a34a', opacity: 1, weight: 7 }] },
+                    addWaypoints: false, createMarker: () => null
+                }).addTo(map);
 
-    routingControlSafe.on('routesfound', e => {
-        updateRouteStats('safe', e.routes[0], activeRiskZones, safePlan.avoided);
-        document.getElementById('info-panel').style.display = 'block';
-        if (++routesFound >= 2) applyRouteVisibility();
-    });
-    routingControlDirect.on('routesfound', e => {
-        updateRouteStats('direct', e.routes[0], activeRiskZones);
-        if (++routesFound >= 2) applyRouteVisibility();
-    });
-}
+                routingControlSafe.on('routesfound', e => {
+                    updateRouteStats('safe', e.routes[0], activeRiskZones, safePlan.avoided);
+                    document.getElementById('info-panel').style.display = 'block';
+                    if (++routesFound >= 2) applyRouteVisibility();
+                });
+                routingControlDirect.on('routesfound', e => {
+                    updateRouteStats('direct', e.routes[0], activeRiskZones);
+                    if (++routesFound >= 2) applyRouteVisibility();
+                });
+            }
 
-function showToast(message, type = '') {
-    const toast = document.createElement('div');
-    toast.className = `app-toast ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('visible'));
-    setTimeout(() => { toast.classList.remove('visible'); setTimeout(() => toast.remove(), 220); }, 3200);
-}
+            function showToast(message, type = '') {
+                const toast = document.createElement('div');
+                toast.className = `app-toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                requestAnimationFrame(() => toast.classList.add('visible'));
+                setTimeout(() => { toast.classList.remove('visible'); setTimeout(() => toast.remove(), 220); }, 3200);
+            }
 
-function compactDisplayName(item) {
-    return (item.display_name || '').split(',').map(p => p.trim()).filter(p => p && !/^b[aâ]timents?\b/i.test(p) && !/^(a|b)$/i.test(p)).slice(0, 4).join(', ');
-}
+            function compactDisplayName(item) {
+                return (item.display_name || '').split(',').map(p => p.trim()).filter(p => p && !/^b[aâ]timents?\b/i.test(p) && !/^(a|b)$/i.test(p)).slice(0, 4).join(', ');
+            }
 
-function getCity(address = {}) {
-    return address.city || address.town || address.village || address.municipality || address.suburb || address.county || '';
-}
+            function getCity(address = {}) {
+                return address.city || address.town || address.village || address.municipality || address.suburb || address.county || '';
+            }
 
-function buildSearchLabel(item) {
-    const address = item.address || {};
-    const city = getCity(address);
-    const postcode = address.postcode ? ` (${address.postcode})` : '';
-    const road = address.road || address.pedestrian || address.footway || address.path || address.cycleway || '';
-    const poi = item.name || address.restaurant || address.cafe || address.bar || address.pub || address.shop || address.amenity || address.leisure || '';
-    if (poi && city && !/^(b[aâ]timents?|building)$/i.test(poi)) return `${poi}, ${city}${postcode}`;
-    if (road && city) return `${address.house_number ? address.house_number + ' ' : ''}${road}, ${city}${postcode}`;
-    if (city && address.postcode) return `${city} (${address.postcode})`;
-    return compactDisplayName(item) || item.display_name || 'Résultat sans libellé';
-}
+            function buildSearchLabel(item) {
+                const address = item.address || {};
+                const city = getCity(address);
+                const postcode = address.postcode ? ` (${address.postcode})` : '';
+                const road = address.road || address.pedestrian || address.footway || address.path || address.cycleway || '';
+                const poi = item.name || address.restaurant || address.cafe || address.bar || address.pub || address.shop || address.amenity || address.leisure || '';
+                if (poi && city && !/^(b[aâ]timents?|building)$/i.test(poi)) return `${poi}, ${city}${postcode}`;
+                if (road && city) return `${address.house_number ? address.house_number + ' ' : ''}${road}, ${city}${postcode}`;
+                if (city && address.postcode) return `${city} (${address.postcode})`;
+                return compactDisplayName(item) || item.display_name || 'Résultat sans libellé';
+            }
 
-function buildSearchSubtitle(item, label) {
-    const compact = compactDisplayName(item);
-    return (!compact || compact === label) ? 'France' : compact;
-}
+            function buildSearchSubtitle(item, label) {
+                const compact = compactDisplayName(item);
+                return (!compact || compact === label) ? 'France' : compact;
+            }
 
-function renderSearchResults(results) {
-    searchResultsEl.innerHTML = '';
-    if (results.length === 0) {
-        searchResultsEl.innerHTML = '<button class="search-result search-empty" type="button">Aucun résultat trouvé en France.</button>';
-        searchResultsEl.classList.add('visible');
-        return;
-    }
-    results.forEach(item => {
-        const label = buildSearchLabel(item);
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'search-result'; btn.title = item.display_name || label;
-        btn.innerHTML = `<span class="search-result-title"></span><span class="search-result-subtitle"></span>`;
-        btn.querySelector('.search-result-title').textContent = label;
-        btn.querySelector('.search-result-subtitle').textContent = buildSearchSubtitle(item, label);
-        btn.addEventListener('click', () => {
-            document.getElementById('destination').value = label;
-            searchResultsEl.classList.remove('visible');
-            calculerItineraires(L.latLng(Number(item.lat), Number(item.lon)));
-        });
-        searchResultsEl.appendChild(btn);
-    });
-    searchResultsEl.classList.add('visible');
-}
+            // Modifié pour savoir quel champ (inputType) reçoit la coordonnée sélectionnée
+            function renderSearchResults(results, inputType) {
+                searchResultsEl.innerHTML = '';
+                if (results.length === 0) {
+                    searchResultsEl.innerHTML = '<button class="search-result search-empty" type="button">Aucun résultat trouvé en France.</button>';
+                    searchResultsEl.classList.add('visible');
+                    return;
+                }
+                results.forEach(item => {
+                    const label = buildSearchLabel(item);
+                    const btn = document.createElement('button');
+                    btn.type = 'button'; btn.className = 'search-result'; btn.title = item.display_name || label;
+                    btn.innerHTML = `<span class="search-result-title"></span><span class="search-result-subtitle"></span>`;
+                    btn.querySelector('.search-result-title').textContent = label;
+                    btn.querySelector('.search-result-subtitle').textContent = buildSearchSubtitle(item, label);
+                    btn.addEventListener('click', () => {
+                        document.getElementById(inputType).value = label;
+                        searchResultsEl.classList.remove('visible');
+                        
+                        if (inputType === 'depart') {
+                            currentDepart = L.latLng(Number(item.lat), Number(item.lon));
+                            if (currentDestination) {
+                                calculerItineraires(currentDestination);
+                            } else {
+                                map.flyTo(currentDepart, 15);
+                            }
+                        } else {
+                            calculerItineraires(L.latLng(Number(item.lat), Number(item.lon)));
+                        }
+                    });
+                    searchResultsEl.appendChild(btn);
+                });
+                searchResultsEl.classList.add('visible');
+            }
 
-async function rechercherDestination(value) {
-    const term = value.trim();
-    if (term.length < 3) { searchResultsEl.classList.remove('visible'); return; }
-    try {
-        const params = new URLSearchParams({ format: 'json', limit: '8', addressdetails: '1', countrycodes: 'fr', 'accept-language': 'fr', q: term });
-        if (userPos) {
-            params.set('viewbox', [userPos.lng - 1.1, userPos.lat + 0.8, userPos.lng + 1.1, userPos.lat - 0.8].join(','));
-            params.set('bounded', '0');
-        }
-        const data = await (await fetch(`https://nominatim.openstreetmap.org/search?${params}`)).json();
-        const franceOnly = data.filter(item => !item.address?.country_code || item.address.country_code.toLowerCase() === 'fr');
-        renderSearchResults(franceOnly);
-        if (franceOnly.length === 0) showToast("Aucun résultat trouvé en France.", 'error');
-    } catch { showToast("Recherche indisponible. Vérifie la connexion réseau.", 'error'); }
-}
+            async function rechercherDestination(value, inputType) {
+                const term = value.trim();
+                if (term.length < 3) { searchResultsEl.classList.remove('visible'); return; }
+                try {
+                    const params = new URLSearchParams({ format: 'json', limit: '8', addressdetails: '1', countrycodes: 'fr', 'accept-language': 'fr', q: term });
+                    if (userPos) {
+                        params.set('viewbox', [userPos.lng - 1.1, userPos.lat + 0.8, userPos.lng + 1.1, userPos.lat - 0.8].join(','));
+                        params.set('bounded', '0');
+                    }
+                    const data = await (await fetch(`https://nominatim.openstreetmap.org/search?${params}`)).json();
+                    const franceOnly = data.filter(item => !item.address?.country_code || item.address.country_code.toLowerCase() === 'fr');
+                    renderSearchResults(franceOnly, inputType);
+                    if (franceOnly.length === 0) showToast("Aucun résultat trouvé en France.", 'error');
+                } catch { showToast("Recherche indisponible. Vérifie la connexion réseau.", 'error'); }
+            }
 
-// 3. Recherche
-document.getElementById('destination').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => rechercherDestination(e.target.value), 450); });
-document.getElementById('destination').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); rechercherDestination(e.target.value); } });
-document.querySelectorAll('.route-choice').forEach(btn => btn.addEventListener('click', () => setSelectedRoute(btn.dataset.route)));
-document.getElementById('start-guidage').addEventListener('click', () => {
-    if (!lastRouteStats[selectedRoute]) { showToast("Choisis une suggestion puis attends le calcul du trajet.", 'error'); return; }
-    setGuidanceMode(true);
-    showToast(`Guidage prototype lancé. Suivez ${selectedRoute === 'safe' ? 'la ligne verte' : 'la ligne gris foncé'}.`, 'success');
-});
-document.getElementById('edit-route').addEventListener('click', () => { setGuidanceMode(false); showToast("Options de trajet affichées.", 'success'); });
-document.getElementById('close-route-panel').addEventListener('click', () => setPanelCollapsed(true));
-document.getElementById('open-route-panel').addEventListener('click', () => setPanelCollapsed(false));
-document.getElementById('simulate-incident').addEventListener('click', () => {
-    if (!userPos || !currentDestination) { showToast("Calcule d'abord un itinéraire.", 'error'); return; }
-    virtualRiskZones = [{ lat: (userPos.lat + currentDestination.lat) / 2, lng: (userPos.lng + currentDestination.lng) / 2, ss: 1, typeSignalement: 'incident', isCritical: true, timestamp: new Date() }];
-    calculerItineraires(currentDestination, { reason: 'simulation' });
-});
+            // 3. Recherche (Écouteurs adaptés aux deux champs)
+            document.getElementById('depart').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => rechercherDestination(e.target.value, 'depart'), 450); });
+            document.getElementById('depart').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); rechercherDestination(e.target.value, 'depart'); } });
 
-function generateHexGrid() {
-    hexLayer.clearLayers();
-    hexagonsMap.clear();
-    const bounds = map.getBounds();
-    const polygon = [[[bounds.getSouth(), bounds.getWest()], [bounds.getSouth(), bounds.getEast()], [bounds.getNorth(), bounds.getEast()], [bounds.getNorth(), bounds.getWest()], [bounds.getSouth(), bounds.getWest()]]];
-    h3.polygonToCells(polygon, 9).forEach(h3Index => {
-        const hex = L.polygon(h3.cellToBoundary(h3Index).map(c => [c[0], c[1]]), { color: "transparent", fillColor: "transparent", weight: 0, fillOpacity: 0 });
-        hex.addTo(hexLayer);
-        hexagonsMap.set(h3Index, hex);
-    });
-}
+            document.getElementById('destination').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => rechercherDestination(e.target.value, 'destination'), 450); });
+            document.getElementById('destination').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); rechercherDestination(e.target.value, 'destination'); } });
 
-function refreshHexagonColors(zones) {
-    hexagonsMap.forEach(hex => hex.setStyle({ color: "transparent", fillColor: "transparent", weight: 0, fillOpacity: 0 }));
-    zones.forEach(zone => {
-        const couleur = zone.ss < 4 ? "#ef4444" : zone.ss < 7 ? "#f59e0b" : "#22c55e";
-        const hex = hexagonsMap.get(h3.latLngToCell(zone.lat, zone.lng, 9));
-        if (hex) hex.setStyle({ color: couleur, fillColor: couleur, fillOpacity: 0.45, weight: 2 });
-    });
-}
+            document.querySelectorAll('.route-choice').forEach(btn => btn.addEventListener('click', () => setSelectedRoute(btn.dataset.route)));
+            document.getElementById('start-guidage').addEventListener('click', () => {
+                if (!lastRouteStats[selectedRoute]) { showToast("Choisis une suggestion puis attends le calcul du trajet.", 'error'); return; }
+                setGuidanceMode(true);
+                showToast(`Guidage prototype lancé. Suivez ${selectedRoute === 'safe' ? 'la ligne verte' : 'la ligne gris foncé'}.`, 'success');
+            });
+            document.getElementById('edit-route').addEventListener('click', () => { setGuidanceMode(false); showToast("Options de trajet affichées.", 'success'); });
+            document.getElementById('close-route-panel').addEventListener('click', () => setPanelCollapsed(true));
+            document.getElementById('open-route-panel').addEventListener('click', () => setPanelCollapsed(false));
+            document.getElementById('simulate-incident').addEventListener('click', () => {
+                if (!currentDepart || !currentDestination) { showToast("Calcule d'abord un itinéraire.", 'error'); return; }
+                virtualRiskZones = [{ lat: (currentDepart.lat + currentDestination.lat) / 2, lng: (currentDepart.lng + currentDestination.lng) / 2, ss: 1, typeSignalement: 'incident', isCritical: true, timestamp: new Date() }];
+                calculerItineraires(currentDestination, { reason: 'simulation' });
+            });
 
-async function chargerHexagonesInitials() {
-    try {
-        const snap = await getDocs(collection(db, "signalements"));
-        const zones = [];
-        snap.forEach(doc => {
-            const zone = normalizeSignalement(doc.data());
-            if (zone) zones.push(zone); // tous, pas seulement isCritical
-        });
-        activeRiskZones = zones;
-        generateHexGrid();
-        refreshHexagonColors(activeRiskZones);
-    } catch (error) {
-        console.error(error);
-        generateHexGrid();
-        refreshHexagonColors([]);
-    }
-}
+            function generateHexGrid() {
+                hexLayer.clearLayers();
+                hexagonsMap.clear();
+                const bounds = map.getBounds();
+                const polygon = [[[bounds.getSouth(), bounds.getWest()], [bounds.getSouth(), bounds.getEast()], [bounds.getNorth(), bounds.getEast()], [bounds.getNorth(), bounds.getWest()], [bounds.getSouth(), bounds.getWest()]]];
+                h3.polygonToCells(polygon, 9).forEach(h3Index => {
+                    const hex = L.polygon(h3.cellToBoundary(h3Index).map(c => [c[0], c[1]]), { color: "transparent", fillColor: "transparent", weight: 0, fillOpacity: 0 });
+                    hex.addTo(hexLayer);
+                    hexagonsMap.set(h3Index, hex);
+                });
+            }
 
-map.on('moveend', () => { generateHexGrid(); refreshHexagonColors(activeRiskZones); });
-chargerHexagonesInitials();
-</script>
+            function refreshHexagonColors(zones) {
+                hexagonsMap.forEach(hex => hex.setStyle({ color: "transparent", fillColor: "transparent", weight: 0, fillOpacity: 0 }));
+                zones.forEach(zone => {
+                    const couleur = zone.ss < 4 ? "#ef4444" : zone.ss < 7 ? "#f59e0b" : "#22c55e";
+                    const hex = hexagonsMap.get(h3.latLngToCell(zone.lat, zone.lng, 9));
+                    if (hex) hex.setStyle({ color: couleur, fillColor: couleur, fillOpacity: 0.45, weight: 2 });
+                });
+            }
+
+            async function chargerHexagonesInitials() {
+                try {
+                    const snap = await getDocs(collection(db, "signalements"));
+                    const zones = [];
+                    snap.forEach(doc => {
+                        const zone = normalizeSignalement(doc.data());
+                        if (zone) zones.push(zone); 
+                    });
+                    activeRiskZones = zones;
+                    generateHexGrid();
+                    refreshHexagonColors(activeRiskZones);
+                } catch (error) {
+                    console.error(error);
+                    generateHexGrid();
+                    refreshHexagonColors([]);
+                }
+            }
+
+            map.on('moveend', () => { generateHexGrid(); refreshHexagonColors(activeRiskZones); });
+            chargerHexagonesInitials();
+        </script>
     </body>
 </html>

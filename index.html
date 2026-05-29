@@ -1,927 +1,932 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-
-<title>LightHer · Carte</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-
-<link rel="stylesheet" href="style.css" />
-
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-</script>
-<script src="https://unpkg.com/h3-js"></script>
-<style>
-*,
-*::before,
-*::after{
-box-sizing:border-box;
-margin:0;
-padding:0;
-}
-
-#locate-btn {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  z-index: 2000;
-
-  background: white;
-  border: none;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-
-  font-size: 20px;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-}
-
-#locate-btn:hover {
-  background: #f0f0f0;
-}
-
-
-:root{
---pink:#D946EF;
---pink-light:#F0ABFC;
---pink-dark:#86198F;
---pink-glow:rgba(217,70,239,.28);
---bg-deep:#0D0518;
---bg-card:#160B2E;
---text-primary:#F5E9FF;
---text-muted:#A78BBD;
-}
-
-html,body{
-height:100%;
-font-family:'DM Sans',sans-serif;
-background:var(--bg-deep);
-color:var(--text-primary);
-overflow-x:hidden;
-max-width:100%;
-}
-
-/* fond lumineux */
-body::before{
-content:"";
-position:fixed;
-inset:0;
-background:
-radial-gradient(ellipse 60% 40% at 50% -10%, rgba(140,20,180,.30) 0%, transparent 65%),
-radial-gradient(ellipse 40% 30% at 15% 85%, rgba(217,70,239,.10) 0%, transparent 60%);
-pointer-events:none;
-z-index:0;
-}
-
-/* étoiles */
-.stars{
-position:fixed;
-inset:0;
-pointer-events:none;
-z-index:0;
-overflow:hidden;
-}
-
-.page-hint{
-margin-top:14px;
-font-size:.82rem;
-color:var(--text-muted);
-line-height:1.4;
-max-width:680px;
-margin-inline:auto;
-}
-
-.star{
-position:absolute;
-border-radius:50%;
-background:var(--pink-light);
-animation:twinkle var(--dur,3s) ease-in-out infinite var(--delay,0s);
-}
-
-@keyframes twinkle{
-0%,100%{opacity:.04;transform:scale(1);}
-50%{opacity:.40;transform:scale(1.4);}
-}
-
-/* page */
-.page{
-position:relative;
-z-index:1;
-min-height:100dvh;
-display:flex;
-flex-direction:column;
-padding:26px 24px 120px;
-}
-
-/* header */
-.header{
-text-align:center;
-margin-bottom:34px;
-animation:fadeDown .6s ease both;
-}
-
-.brand-title{
-font-family:'Fraunces',serif;
-font-size:3.2rem;
-font-weight:300;
-letter-spacing:.03em;
-line-height:1;
-color:white;
-}
-
-.brand-title span{
-color:var(--pink);
-}
-
-.brand-sub{
-margin-top:10px;
-font-size:.72rem;
-font-weight:600;
-letter-spacing:.20em;
-text-transform:uppercase;
-color:var(--text-muted);
-}
-
-/* carte container */
-.map-card{
-width:80%;
-max-width:1380px;
-margin:0 auto;
-background:var(--bg-card);
-border:1px solid rgba(217,70,239,.25);
-border-radius:30px;
-padding:18px;
-box-shadow:
-0 24px 60px rgba(0,0,0,.55),
-0 0 50px rgba(140,20,180,.12);
-animation:fadeUp .6s ease .1s both;
-}
-
-/* carte responsive */
-#carte{
-width:100%;
-height:clamp(460px, 60vh, 680px);
-border-radius:22px;
-overflow:hidden;
-}
-
-.map-wrapper{
-position:relative;
-}
-
-.map-legend{
-position:absolute;
-left:14px;
-bottom:14px;
-z-index:500;
-display:grid;
-gap:7px;
-background:rgba(13,5,24,.88);
-border:1px solid rgba(217,70,239,.25);
-border-radius:14px;
-padding:12px 14px;
-box-shadow:0 10px 24px rgba(0,0,0,.28);
-backdrop-filter:blur(8px);
-}
-
-.legend-title{
-font-size:.72rem;
-font-weight:700;
-letter-spacing:.08em;
-text-transform:uppercase;
-color:var(--text-primary);
-}
-
-.legend-item{
-display:flex;
-align-items:center;
-gap:8px;
-font-size:.78rem;
-color:var(--text-muted);
-white-space:nowrap;
-}
-
-.legend-dot{
-width:11px;
-height:11px;
-border-radius:50%;
-display:inline-block;
-box-shadow:0 0 0 3px rgba(255,255,255,.08);
-}
-
-.legend-note{
-max-width:210px;
-font-size:.68rem;
-line-height:1.35;
-color:var(--text-muted);
-}
-
-.popup-signalement{
-min-width:210px;
-color:#1f1230;
-font-family:'DM Sans',sans-serif;
-}
-
-.popup-signalement strong{
-display:block;
-margin-bottom:6px;
-font-size:.95rem;
-}
-
-.popup-signalement p{
-margin:3px 0;
-font-size:.82rem;
-}
-
-.popup-muted{
-color:#6b5878;
-}
-
-.incident-alert{
-display:none;
-position:absolute;
-top:14px;
-left:14px;
-right:14px;
-z-index:520;
-padding:12px 14px;
-border-radius:14px;
-border:1px solid rgba(239,68,68,.45);
-background:rgba(127,29,29,.88);
-color:#fee2e2;
-box-shadow:0 10px 24px rgba(0,0,0,.28);
-font-size:.82rem;
-line-height:1.4;
-backdrop-filter:blur(8px);
-}
-
-.incident-alert.visible{
-display:block;
-}
-
-/* bouton + */
-.plus{
-position:fixed;
-right:32px;
-bottom:120px;
-width:72px;
-height:72px;
-border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
-text-decoration:none;
-font-size:44px;
-font-weight:700;
-background:#D946EF;
-color:white;
-box-shadow:
-0 10px 24px rgba(0,0,0,.28),
-0 0 0 12px rgba(217,70,239,.16);
-z-index:20;
-transition:.2s;
-}
-
-
-.plus:hover{
-transform:scale(1.06);
-
-}
-
-/* nav */
-/* mobile */
-@media (max-width:768px){
-
-.page{
-padding:20px 14px 92px;
-}
-
-.header{
-margin-bottom:22px;
-}
-
-.brand-title{
-font-size:2.2rem;
-}
-
-.brand-sub{
-font-size:.62rem;
-}
-
-.map-card{
-padding:10px;
-border-radius:22px;
-width:96%;
-}
-
-#carte{
-height:clamp(420px, 62vh, 620px);
-border-radius:16px;
-}
-
-.incident-alert{
-top:10px;
-left:58px;
-right:10px;
-padding:8px 10px;
-font-size:.72rem;
-line-height:1.3;
-border-radius:10px;
-}
-
-.map-legend{
-left:10px;
-bottom:10px;
-max-width:230px;
-gap:4px;
-padding:9px 10px;
-border-radius:12px;
-}
-
-.legend-title{
-font-size:.64rem;
-}
-
-.legend-item{
-font-size:.68rem;
-gap:6px;
-}
-
-.legend-dot{
-width:9px;
-height:9px;
-}
-
-.legend-note{
-font-size:.62rem;
-max-width:190px;
-}
-
-.plus{
-width:58px;
-height:58px;
-font-size:34px;
-right:16px;
-bottom:86px;
-}
-}
-
-/* anim */
-@keyframes fadeDown{
-from{opacity:0;transform:translateY(-16px)}
-to{opacity:1;transform:translateY(0)}
-}
-
-@keyframes fadeUp{
-from{opacity:0;transform:translateY(20px)}
-to{opacity:1;transform:translateY(0)}
-}
-</style>
-
-</head>
-
-<body>
-
-<div class="stars" id="stars"></div>
-
-<main class="page">
-
-<header class="header">
-<h1 class="brand-title">Light<span>Her</span></h1>
-<p class="brand-sub">Ta sécurité, la nuit</p>
-<p class="page-hint">Les couleurs indiquent le niveau de sécurité perçu : vert sûr, orange vigilance, rouge à éviter.</p>
-</header>
-
-
-<section class="map-card">
-<div class="map-wrapper">
-<div id="carte"></div>
-<!-- bouton recentrer -->
-<button id="locate-btn">📍</button>
-
-<div class="incident-alert" id="incident-alert" role="status" aria-live="polite"></div>
-<div class="map-legend" aria-label="Légende des scores de sécurité">
-<div class="legend-title">Sécurité</div>
-<div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Vert : sûr (SS ≥ 7)</div>
-<div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Orange : vigilance (4 à 6.9)</div>
-<div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Rouge : à éviter (&lt; 4)</div>
-<div class="legend-item"><span class="legend-dot" style="background:#9CA3AF"></span>Gris : données insuffisantes</div>
-<div class="legend-note" id="legend-note">Filtre 2h prêt avec fallback démo.</div>
-</div>
-</div>
-</section>
-
-<a href="signalement.html" class="plus">+</a>
-
-<nav>
-<a href="index.html">Carte</a>
-<a href="signalement.html">Signaler</a>
-<a href="itineraire.html">Itinéraire</a>
-<a href="sos.html">SOS</a>
-<a href="profil.html">Profil</a>
-</nav>
-
-</main>
-
-<script type="module">
-
-import { auth, db } from './firebase-config.js';
-import { getCouleur } from './score.js';
-
-import { onAuthStateChanged }
-from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-
-import { collection, onSnapshot }
-from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-onAuthStateChanged(auth, user => {
-if(!user) window.location.href = 'auth.html';
-});
-
-/* étoiles */
-const starsEl = document.getElementById('stars');
-
-for(let i=0;i<30;i++){
-const s = document.createElement('div');
-s.className = 'star';
-
-const size = Math.random()*2.5 + 1;
-
-s.style.cssText =
-`left:${Math.random()*100}%;
-top:${Math.random()*100}%;
-width:${size}px;
-height:${size}px;
---dur:${(Math.random()*3+2).toFixed(1)}s;
---delay:${(Math.random()*4).toFixed(1)}s;`;
-
-starsEl.appendChild(s);
-}
-
-/* carte */
-const carte = L.map('carte').setView([48.8566,2.3522],13);
-
-/* Activer le double-clic pour signaler à distance vers la page de Coumba */
-carte.doubleClickZoom.disable(); // On désactive le zoom au double clic
-
-carte.on('dblclick', function(e) {
-    const lat = e.latlng.lat;
-    const lng = e.latlng.lng;
-    
-    // On redirige vers signalement.html en ajoutant les coordonnées dans l'URL
-    window.location.href = `signalement.html?lat=${lat}&lng=${lng}`;
-});
-
-const signalementsLayer = L.layerGroup().addTo(carte);
-const hexLayer = L.layerGroup().addTo(carte);
-let selectedHexagon = null;
-const hexagonsMap = new Map();
-let currentSignalements = [];
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const MIN_RECENT_FOR_DEMO = 3;
-const DEMO_SIGNALEMENTS = [
-{
-eclairage:8,
-affluence:7,
-incidents:9,
-sentiment:8,
-typeSignalement:'rue_normale',
-ss:8,
-lat:48.8566,
-lng:2.3522,
-timestamp:new Date(),
-demoLocal:true
-},
-{
-eclairage:5,
-affluence:5,
-incidents:5,
-sentiment:5,
-typeSignalement:'lampadaire',
-ss:5,
-lat:48.861,
-lng:2.34,
-timestamp:new Date(),
-ticketMunicipalSimule:true,
-statutTicketMunicipal:'transmis',
-demoLocal:true
-},
-{
-eclairage:2,
-affluence:2,
-incidents:1,
-sentiment:2,
-typeSignalement:'incident',
-ss:2,
-lat:48.849,
-lng:2.36,
-timestamp:new Date(),
-demoLocal:true
-}
-];
-
-L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-).addTo(carte);
-generateHexGrid();
-refreshHexagonColors();
-
-function createUserPositionIcon(){
-return L.divIcon({
-className:'',
-html:'<div class="user-position-marker" aria-label="Vous êtes ici"><span class="pulse"></span><span class="dot"></span></div>',
-iconSize:[34,34],
-iconAnchor:[17,17],
-popupAnchor:[0,-16]
-});
-}
-
-function escapeHtml(value){
-return String(value ?? '')
-.replace(/&/g,'&amp;')
-.replaceAll('<','&lt;')
-.replaceAll('>','&gt;')
-.replaceAll('"','&quot;')
-.replaceAll("'",'&#039;');
-}
-
-function getSignalementDate(d){
-const raw = d.createdAt || d.timestamp;
-if(!raw) return null;
-if(typeof raw.toDate === 'function') return raw.toDate();
-if(raw instanceof Date) return raw;
-const date = new Date(raw);
-return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function isRecent(d){
-const date = getSignalementDate(d);
-if(!date) return false;
-return Date.now() - date.getTime() <= TWO_HOURS_MS;
-}
-
-function formatFreshness(d){
-const date = getSignalementDate(d);
-if(!date) return 'date inconnue';
-const diffMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
-if(diffMinutes < 1) return 'à l’instant';
-if(diffMinutes < 60) return `il y a ${diffMinutes} min`;
-const hours = Math.round(diffMinutes / 60);
-return `il y a ${hours} h`;
-}
-
-function getTypeLabel(type){
-return ({
-rue_normale:'Rue normale',
-lampadaire:'Lampadaire cassé',
-obstacle:'Obstacle',
-incident:'Incident / danger'
-})[type] || 'Rue normale';
-}
-
-function getMunicipalStatusLabel(status){
-return ({
-transmis:'transmis',
-en_cours:'en cours',
-resolu:'résolu'
-})[status] || status || 'non concerné';
-}
-
-function getSignalementVisual(d){
-const ss = Number(d.ss);
-if(!Number.isFinite(ss)){
-return { couleur:'#9CA3AF', label:'Données insuffisantes', scoreLabel:'N/A' };
-}
-const info = getCouleur(ss);
-return { ...info, scoreLabel:ss };
-}
-
-function buildPopup(d, visual){
-return `
-<div class="popup-signalement">
-<strong>Signalement ${escapeHtml(getTypeLabel(d.typeSignalement || d.type))}</strong>
-<p><b>Score SS :</b> ${escapeHtml(visual.scoreLabel)}/10 - ${escapeHtml(visual.label)}</p>
-
-${d.nbVotes ? `<p><b>Nombre d'évaluations :</b> ${escapeHtml(d.nbVotes)}</p>` : ''}
-
-<p><b>Critères :</b> éclairage ${escapeHtml(d.eclairage ?? 'N/A')}/10, affluence ${escapeHtml(d.affluence ?? 'N/A')}/10</p>
-<p><b>Incidents :</b> ${escapeHtml(d.incidents ?? 'N/A')}/10 · sentiment ${escapeHtml(d.sentiment ?? 'N/A')}/10</p>
-${d.ticketMunicipalSimule ? `<p><b>Ticket municipal simulé :</b> ${escapeHtml(getMunicipalStatusLabel(d.statutTicketMunicipal))}</p>` : ''}
-<p class="popup-muted"><b>Fraîcheur :</b> ${escapeHtml(formatFreshness(d))}</p>
-${d.typeSignalement === 'incident' ? '<p class="popup-muted"><b>Alerte :</b> incident critique visible sur la carte.</p>' : ''}
-${d.demoLocal ? '<p class="popup-muted"><b>Démo :</b> donnée locale non enregistrée dans Firebase.</p>' : ''}
-</div>`;
-}
-
-function updateIncidentAlert(signalements){
-const alert = document.getElementById('incident-alert');
-const incidents = signalements.filter(d => (d.typeSignalement || d.type) === 'incident' || Number(d.ss) < 4);
-if(incidents.length === 0){
-alert.classList.remove('visible');
-alert.textContent = '';
-return;
-}
-alert.textContent = `${incidents.length} signalement critique détecté sur la carte. Prototype : une notification push serait envoyée en version mobile.`;
-alert.classList.add('visible');
-}
-
-/* signalements firebase */
-
-function generateHexGrid(){
-
-    hexLayer.clearLayers();
-    hexagonsMap.clear();
-
-    const bounds = carte.getBounds();
-
-    const polygon = [[
-    [bounds.getSouth(), bounds.getWest()],
-    [bounds.getSouth(), bounds.getEast()],
-    [bounds.getNorth(), bounds.getEast()],
-    [bounds.getNorth(), bounds.getWest()],
-    [bounds.getSouth(), bounds.getWest()]
-]];
-
-const hexagons = h3.polygonToCells(polygon, 9);
-
-
-    hexagons.forEach(h3Index => {
-
-        const boundary = h3.cellToBoundary(h3Index);
-
-        const coords = boundary.map(coord => [
-            coord[0],
-            coord[1]
-        ]);
-
-        const hex = L.polygon(coords,{
-    color:"transparent",
-    fillColor:"transparent",
-    weight:0,
-    fillOpacity:0
-});
-
-        /* clic sur un hexagone */
-        hex.on('click',()=>{
-
-            selectedHexagon = h3Index;
-
-            console.log("Hexagone sélectionné :", h3Index);
-
-            /* reset visuel */
-            hexagonsMap.forEach(h=>{
-    h.setStyle({
-        color:"transparent",
-        fillColor:"transparent",
-        weight:0,
-        fillOpacity:0
-    });
-});
-
-            
-            /* hexagone sélectionné */
-hex.setStyle({
-    color:"#ffffff",
-    fillColor:"#D946EF",
-    fillOpacity:0.35,
-    weight:1.5
-});
-
-        });
-
-        hex.addTo(hexLayer);
-
-        hexagonsMap.set(h3Index, hex);
-
-    });
-
-}
-
-function refreshHexagonColors(){
-
-    /* reset */
-    hexagonsMap.forEach(hex => {
-
-        hex.setStyle({
-            color:"transparent",
-            fillColor:"transparent",
-            weight:0,
-            fillOpacity:0
-        });
-
-    });
-
-    /* recolor */
-    currentSignalements.forEach(d => {
-
-        const visual = getSignalementVisual(d);
-
-        const lat = Number(d.lat);
-        const lng = Number(d.lng);
-
-        const h3Index = h3.latLngToCell(lat, lng, 9);
-
-        const hex = hexagonsMap.get(h3Index);
-
-        if(hex){
-
-            hex.setStyle({
-                color: visual.couleur,
-                fillColor: visual.couleur,
-                fillOpacity: 0.45,
-                weight: 2
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+        <title>LightHer · Carte</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+        <link rel="stylesheet" href="style.css" />
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"> </script>
+        <script src="https://unpkg.com/h3-js"></script>
+        <style>
+            *,
+            *::before,
+            *::after{
+                box-sizing:border-box;
+                margin:0;
+                padding:0;
+            }
+
+            #locate-btn {
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                z-index: 2000;
+
+                background: white;
+                border: none;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+
+                font-size: 20px;
+                cursor: pointer;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            }
+
+            #locate-btn:hover {
+                background: #f0f0f0;
+            }
+
+
+            :root{
+                --pink:#D946EF;
+                --pink-light:#F0ABFC;
+                --pink-dark:#86198F;
+                --pink-glow:rgba(217,70,239,.28);
+                --bg-deep:#0D0518;
+                --bg-card:#160B2E;
+                --text-primary:#F5E9FF;
+                --text-muted:#A78BBD;
+            }
+
+            html,body{
+                height:100%;
+                font-family:'DM Sans',sans-serif;
+                background:var(--bg-deep);
+                color:var(--text-primary);
+                overflow-x:hidden;
+                max-width:100%;
+            }
+
+            /* fond lumineux */
+            body::before{
+                content:"";
+                position:fixed;
+                inset:0;
+                background:
+                radial-gradient(ellipse 60% 40% at 50% -10%, rgba(140,20,180,.30) 0%, transparent 65%),
+                radial-gradient(ellipse 40% 30% at 15% 85%, rgba(217,70,239,.10) 0%, transparent 60%);
+                pointer-events:none;
+                z-index:0;
+            }
+
+            /* étoiles */
+            .stars{
+                position:fixed;
+                inset:0;
+                pointer-events:none;
+                z-index:0;
+                overflow:hidden;
+            }
+
+            .page-hint{
+                margin-top:14px;
+                font-size:.82rem;
+                color:var(--text-muted);
+                line-height:1.4;
+                max-width:680px;
+                margin-inline:auto;
+            }
+
+            .star{
+                position:absolute;
+                border-radius:50%;
+                background:var(--pink-light);
+                animation:twinkle var(--dur,3s) ease-in-out infinite var(--delay,0s);
+            }
+
+            @keyframes twinkle{
+                0%,100%{opacity:.04;transform:scale(1);}
+                50%{opacity:.40;transform:scale(1.4);}
+            }
+
+            /* page */
+            .page{
+                position:relative;
+                z-index:1;
+                min-height:100dvh;
+                display:flex;
+                flex-direction:column;
+                padding:26px 24px 120px;
+            }
+
+            /* header */
+            .header{
+                text-align:center;
+                margin-bottom:34px;
+                animation:fadeDown .6s ease both;
+            }
+
+            .brand-title{
+                font-family:'Fraunces',serif;
+                font-size:3.2rem;
+                font-weight:300;
+                letter-spacing:.03em;
+                line-height:1;
+                color:white;
+            }
+
+            .brand-title span{
+                color:var(--pink);
+            }
+
+            .brand-sub{
+                margin-top:10px;
+                font-size:.72rem;
+                font-weight:600;
+                letter-spacing:.20em;
+                text-transform:uppercase;
+                color:var(--text-muted);
+            }
+
+            /* carte container */
+            .map-card{
+                width:80%;
+                max-width:1380px;
+                margin:0 auto;
+                background:var(--bg-card);
+                border:1px solid rgba(217,70,239,.25);
+                border-radius:30px;
+                padding:18px;
+                box-shadow:
+                0 24px 60px rgba(0,0,0,.55),
+                0 0 50px rgba(140,20,180,.12);
+                animation:fadeUp .6s ease .1s both;
+            }
+
+            /* carte responsive */
+            #carte{
+                width:100%;
+                height:clamp(460px, 60vh, 680px);
+                border-radius:22px;
+                overflow:hidden;
+            }
+
+            .map-wrapper{
+                position:relative;
+            }
+
+            .map-legend{
+                position:absolute;
+                left:14px;
+                bottom:14px;
+                z-index:500;
+                display:grid;
+                gap:7px;
+                background:rgba(13,5,24,.88);
+                border:1px solid rgba(217,70,239,.25);
+                border-radius:14px;
+                padding:12px 14px;
+                box-shadow:0 10px 24px rgba(0,0,0,.28);
+                backdrop-filter:blur(8px);
+            }
+
+            .legend-title{
+                font-size:.72rem;
+                font-weight:700;
+                letter-spacing:.08em;
+                text-transform:uppercase;
+                color:var(--text-primary);
+            }
+
+            .legend-item{
+                display:flex;
+                align-items:center;
+                gap:8px;
+                font-size:.78rem;
+                color:var(--text-muted);
+                white-space:nowrap;
+            }
+
+            .legend-dot{
+                width:11px;
+                height:11px;
+                border-radius:50%;
+                display:inline-block;
+                box-shadow:0 0 0 3px rgba(255,255,255,.08);
+            }
+
+            .legend-note{
+                max-width:210px;
+                font-size:.68rem;
+                line-height:1.35;
+                color:var(--text-muted);
+            }
+
+            .popup-signalement{
+                min-width:210px;
+                color:#1f1230;
+                font-family:'DM Sans',sans-serif;
+            }
+
+            .popup-signalement strong{
+                display:block;
+                margin-bottom:6px;
+                font-size:.95rem;
+            }
+
+            .popup-signalement p{
+                margin:3px 0;
+                font-size:.82rem;
+            }
+
+            .popup-muted{
+                color:#6b5878;
+            }
+
+            .incident-alert{
+                display:none;
+                position:absolute;
+                top:14px;
+                left:14px;
+                right:14px;
+                z-index:520;
+                padding:12px 14px;
+                border-radius:14px;
+                border:1px solid rgba(239,68,68,.45);
+                background:rgba(127,29,29,.88);
+                color:#fee2e2;
+                box-shadow:0 10px 24px rgba(0,0,0,.28);
+                font-size:.82rem;
+                line-height:1.4;
+                backdrop-filter:blur(8px);
+            }
+
+            .incident-alert.visible{
+                display:block;
+            }
+
+            /* bouton + */
+            .plus{
+                position:fixed;
+                right:32px;
+                bottom:120px;
+                width:72px;
+                height:72px;
+                border-radius:50%;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                text-decoration:none;
+                font-size:44px;
+                font-weight:700;
+                background:#D946EF;
+                color:white;
+                box-shadow:
+                0 10px 24px rgba(0,0,0,.28),
+                0 0 0 12px rgba(217,70,239,.16);
+                z-index:20;
+                transition:.2s;
+            }
+
+
+            .plus:hover{
+                transform:scale(1.06);
+
+            }
+
+            /* nav */
+            /* mobile */
+            @media (max-width:768px){
+
+                .page{
+                padding:20px 14px 92px;
+            }
+
+            .header{
+                margin-bottom:22px;
+            }
+
+            .brand-title{
+                font-size:2.2rem;
+            }
+
+            .brand-sub{
+                font-size:.62rem;
+            }
+
+            .map-card{
+                padding:10px;
+                border-radius:22px;
+                width:96%;
+            }
+
+            #carte{
+                height:clamp(420px, 62vh, 620px);
+                border-radius:16px;
+            }
+
+            .incident-alert{
+                top:10px;
+                left:58px;
+                right:10px;
+                padding:8px 10px;
+                font-size:.72rem;
+                line-height:1.3;
+                border-radius:10px;
+            }
+
+            .map-legend{
+                left:10px;
+                bottom:10px;
+                max-width:230px;
+                gap:4px;
+                padding:9px 10px;
+                border-radius:12px;
+            }
+
+            .legend-title{
+                font-size:.64rem;
+            }
+
+            .legend-item{
+                font-size:.68rem;
+                gap:6px;
+            }
+
+            .legend-dot{
+                width:9px;
+                height:9px;
+            }
+
+            .legend-note{
+                font-size:.62rem;
+                max-width:190px;
+            }
+
+            .plus{
+                width:58px;
+                height:58px;
+                font-size:34px;
+                right:16px;
+                bottom:86px;
+            }
+            }
+
+            /* anim */
+            @keyframes fadeDown{
+                from{opacity:0;transform:translateY(-16px)}
+                to{opacity:1;transform:translateY(0)}
+            }
+
+            @keyframes fadeUp{
+                from{opacity:0;transform:translateY(20px)}
+                to{opacity:1;transform:translateY(0)}
+            }
+        </style>
+
+    </head>
+
+    <body>
+
+        <div class="stars" id="stars"></div>
+
+        <main class="page">
+
+            <header class="header">
+                <h1 class="brand-title">Light<span>Her</span></h1>
+                <p class="brand-sub">Ta sécurité, la nuit</p>
+                <p class="page-hint">Les couleurs indiquent le niveau de sécurité perçu : vert sûr, orange vigilance, rouge à éviter.</p>
+            </header>
+
+
+            <section class="map-card">
+                <div class="map-wrapper">
+                    <div id="carte"></div>
+                    <button id="locate-btn">📍</button>
+
+                    <div class="incident-alert" id="incident-alert" role="status" aria-live="polite"></div>
+                    <div class="map-legend" aria-label="Légende des scores de sécurité">
+                        <div class="legend-title">Sécurité</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Vert : sûr (SS ≥ 7)</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Orange : vigilance (4 à 6.9)</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Rouge : à éviter (&lt; 4)</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#9CA3AF"></span>Gris : données insuffisantes</div>
+                        <div class="legend-note" id="legend-note">Filtre 2h prêt avec fallback démo.</div>
+                    </div>
+                </div>
+            </section>
+
+            <a href="signalement.html" class="plus">+</a>
+
+            <nav>
+                <a href="index.html">Carte</a>
+                <a href="signalement.html">Signaler</a>
+                <a href="itineraire.html">Itinéraire</a>
+                <a href="sos.html">SOS</a>
+                <a href="profil.html">Profil</a>
+            </nav>
+
+        </main>
+
+        <script type="module">
+
+            import { auth, db } from './firebase-config.js';
+            import { getCouleur } from './score.js';
+
+            import { onAuthStateChanged }
+            from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+            import { collection, onSnapshot }
+            from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+            onAuthStateChanged(auth, user => {
+            if(!user) window.location.href = 'auth.html';
             });
 
-            hex.bindPopup(buildPopup(d, visual));
+            /* étoiles */
+            const starsEl = document.getElementById('stars');
 
-        }
+            for(let i=0;i<30;i++){
+            const s = document.createElement('div');
+            s.className = 'star';
 
-    });
+            const size = Math.random()*2.5 + 1;
 
-}
+            s.style.cssText =
+            `left:${Math.random()*100}%;
+            top:${Math.random()*100}%;
+            width:${size}px;
+            height:${size}px;
+            --dur:${(Math.random()*3+2).toFixed(1)}s;
+            --delay:${(Math.random()*4).toFixed(1)}s;`;
+
+            starsEl.appendChild(s);
+            }
+
+            /* carte */
+            const carte = L.map('carte').setView([48.8566,2.3522],13);
+
+            /* Activer le double-clic pour signaler à distance vers la page de Coumba */
+            carte.doubleClickZoom.disable(); // On désactive le zoom au double clic
+
+            carte.on('dblclick', function(e) {
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+                
+                // On redirige vers signalement.html en ajoutant les coordonnées dans l'URL
+                window.location.href = `signalement.html?lat=${lat}&lng=${lng}`;
+            });
+
+            const signalementsLayer = L.layerGroup().addTo(carte);
+            const hexLayer = L.layerGroup().addTo(carte);
+            let selectedHexagon = null;
+            const hexagonsMap = new Map();
+            let currentSignalements = [];
+            const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+            const MIN_RECENT_FOR_DEMO = 3;
+            const DEMO_SIGNALEMENTS = [
+            {
+            eclairage:8,
+            affluence:7,
+            incidents:9,
+            sentiment:8,
+            typeSignalement:'rue_normale',
+            ss:8,
+            lat:48.8566,
+            lng:2.3522,
+            timestamp:new Date(),
+            demoLocal:true
+            },
+            {
+            eclairage:5,
+            affluence:5,
+            incidents:5,
+            sentiment:5,
+            typeSignalement:'lampadaire',
+            ss:5,
+            lat:48.861,
+            lng:2.34,
+            timestamp:new Date(),
+            ticketMunicipalSimule:true,
+            statutTicketMunicipal:'transmis',
+            demoLocal:true
+            },
+            {
+            eclairage:2,
+            affluence:2,
+            incidents:1,
+            sentiment:2,
+            typeSignalement:'incident',
+            ss:2,
+            lat:48.849,
+            lng:2.36,
+            timestamp:new Date(),
+            demoLocal:true
+            }
+            ];
+
+            // GESTION DYNAMIQUE JOUR / NUIT (MODIFICATION ICI)
+            const modeCarte = localStorage.getItem('modeCarte') || 'jour';
+
+            const tileUrl = modeCarte === 'nuit'
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+            L.tileLayer(tileUrl, {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+            }).addTo(carte);
+
+            generateHexGrid();
+            refreshHexagonColors();
+
+            function createUserPositionIcon(){
+            return L.divIcon({
+            className:'',
+            html:'<div class="user-position-marker" aria-label="Vous êtes ici"><span class="pulse"></span><span class="dot"></span></div>',
+            iconSize:[34,34],
+            iconAnchor:[17,17],
+            popupAnchor:[0,-16]
+            });
+            }
+
+            function escapeHtml(value){
+            return String(value ?? '')
+            .replace(/&/g,'&amp;')
+            .replaceAll('<','&lt;')
+            .replaceAll('>','&gt;')
+            .replaceAll('"','&quot;')
+            .replaceAll("'",'&#039;');
+            }
+
+            function getSignalementDate(d){
+            const raw = d.createdAt || d.timestamp;
+            if(!raw) return null;
+            if(typeof raw.toDate === 'function') return raw.toDate();
+            if(raw instanceof Date) return raw;
+            const date = new Date(raw);
+            return Number.isNaN(date.getTime()) ? null : date;
+            }
+
+            function isRecent(d){
+            const date = getSignalementDate(d);
+            if(!date) return false;
+            return Date.now() - date.getTime() <= TWO_HOURS_MS;
+            }
+
+            function formatFreshness(d){
+            const date = getSignalementDate(d);
+            if(!date) return 'date inconnue';
+            const diffMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+            if(diffMinutes < 1) return 'à l’instant';
+            if(diffMinutes < 60) return `il y a ${diffMinutes} min`;
+            const hours = Math.round(diffMinutes / 60);
+            return `il y a ${hours} h`;
+            }
+
+            function getTypeLabel(type){
+            return ({
+            rue_normale:'Rue normale',
+            lampadaire:'Lampadaire cassé',
+            obstacle:'Obstacle',
+            incident:'Incident / danger'
+            })[type] || 'Rue normale';
+            }
+
+            function getMunicipalStatusLabel(status){
+            return ({
+            transmis:'transmis',
+            en_cours:'en cours',
+            resolu:'résolu'
+            })[status] || status || 'non concerné';
+            }
+
+            function getSignalementVisual(d){
+            const ss = Number(d.ss);
+            if(!Number.isFinite(ss)){
+            return { couleur:'#9CA3AF', label:'Données insuffisantes', scoreLabel:'N/A' };
+            }
+            const info = getCouleur(ss);
+            return { ...info, scoreLabel:ss };
+            }
+
+            function buildPopup(d, visual){
+            return `
+            <div class="popup-signalement">
+            <strong>Signalement ${escapeHtml(getTypeLabel(d.typeSignalement || d.type))}</strong>
+            <p><b>Score SS :</b> ${escapeHtml(visual.scoreLabel)}/10 - ${escapeHtml(visual.label)}</p>
+
+            ${d.nbVotes ? `<p><b>Nombre d'évaluations :</b> ${escapeHtml(d.nbVotes)}</p>` : ''}
+
+            <p><b>Critères :</b> éclairage ${escapeHtml(d.eclairage ?? 'N/A')}/10, affluence ${escapeHtml(d.affluence ?? 'N/A')}/10</p>
+            <p><b>Incidents :</b> ${escapeHtml(d.incidents ?? 'N/A')}/10 · sentiment ${escapeHtml(d.sentiment ?? 'N/A')}/10</p>
+            ${d.ticketMunicipalSimule ? `<p><b>Ticket municipal simulé :</b> ${escapeHtml(getMunicipalStatusLabel(d.statutTicketMunicipal))}</p>` : ''}
+            <p class="popup-muted"><b>Fraîcheur :</b> ${escapeHtml(formatFreshness(d))}</p>
+            ${d.typeSignalement === 'incident' ? '<p class="popup-muted"><b>Alerte :</b> incident critique visible sur la carte.</p>' : ''}
+            ${d.demoLocal ? '<p class="popup-muted"><b>Démo :</b> donnée locale non enregistrée dans Firebase.</p>' : ''}
+            </div>`;
+            }
+
+            function updateIncidentAlert(signalements){
+            const alert = document.getElementById('incident-alert');
+            const incidents = signalements.filter(d => (d.typeSignalement || d.type) === 'incident' || Number(d.ss) < 4);
+            if(incidents.length === 0){
+            alert.classList.remove('visible');
+            alert.textContent = '';
+            return;
+            }
+            alert.textContent = `${incidents.length} signalement critique détecté sur la carte. Prototype : une notification push serait envoyée en version mobile.`;
+            alert.classList.add('visible');
+            }
+
+            /* signalements firebase */
+
+            function generateHexGrid(){
+
+                hexLayer.clearLayers();
+                hexagonsMap.clear();
+
+                const bounds = carte.getBounds();
+
+                const polygon = [[
+                [bounds.getSouth(), bounds.getWest()],
+                [bounds.getSouth(), bounds.getEast()],
+                [bounds.getNorth(), bounds.getEast()],
+                [bounds.getNorth(), bounds.getWest()],
+                [bounds.getSouth(), bounds.getWest()]
+            ]];
+
+            const hexagons = h3.polygonToCells(polygon, 9);
 
 
-onSnapshot(collection(db,'signalements'), (snap)=>{
+                hexagons.forEach(h3Index => {
 
-signalementsLayer.clearLayers();
+                    const boundary = h3.cellToBoundary(h3Index);
 
-let allSignalements = [];
-snap.forEach(doc => {
-const d = doc.data();
-if(Number.isFinite(Number(d.lat)) && Number.isFinite(Number(d.lng))){
-allSignalements.push(d);
-}
-});
+                    const coords = boundary.map(coord => [
+                        coord[0],
+                        coord[1]
+                    ]);
 
-const usingDemoData = allSignalements.length === 0;
-if(usingDemoData){
-allSignalements = DEMO_SIGNALEMENTS;
-}
+                    const hex = L.polygon(coords,{
+                color:"transparent",
+                fillColor:"transparent",
+                weight:0,
+                fillOpacity:0
+            });
 
-const recentSignalements = allSignalements.filter(isRecent);
-const useRecentOnly = recentSignalements.length >= MIN_RECENT_FOR_DEMO;
-const signalementsToDisplay = useRecentOnly ? recentSignalements : allSignalements;
-currentSignalements = signalementsToDisplay;
-const legendNote = document.getElementById('legend-note');
-legendNote.textContent = usingDemoData
-? 'Mode démo : données locales affichées car Firestore est vide.'
-: useRecentOnly
-? 'Affichage des signalements des 2 dernières heures.'
-: 'Mode démo : anciennes données incluses si peu de signalements récents.';
-updateIncidentAlert(signalementsToDisplay);
+                    /* clic sur un hexagone */
+                    hex.on('click',()=>{
 
-signalementsToDisplay.forEach(d => {
+                        selectedHexagon = h3Index;
 
-const visual = getSignalementVisual(d);
-const lat = Number(d.lat);
-const lng = Number(d.lng);
+                        console.log("Hexagone sélectionné :", h3Index);
 
-const h3Index = h3.latLngToCell(lat, lng, 9);
+                        /* reset visuel */
+                        hexagonsMap.forEach(h=>{
+                h.setStyle({
+                    color:"transparent",
+                    fillColor:"transparent",
+                    weight:0,
+                    fillOpacity:0
+                });
+            });
 
-const hex = hexagonsMap.get(h3Index);
+                        
+                        /* hexagone sélectionné */
+            hex.setStyle({
+                color:"#ffffff",
+                fillColor:"#D946EF",
+                fillOpacity:0.35,
+                weight:1.5
+            });
 
-if(hex){
+                    });
 
-    hex.setStyle({
-        color: visual.couleur,
-        fillColor: visual.couleur,
-        fillOpacity: 0.45,
-        weight: 2
-    });
+                    hex.addTo(hexLayer);
 
-    hex.bindPopup(buildPopup(d, visual));
+                    hexagonsMap.set(h3Index, hex);
 
-}
+                });
 
-});
+            }
 
-}, (error)=>{
+            function refreshHexagonColors(){
 
+                /* reset */
+                hexagonsMap.forEach(hex => {
 
-console.error("Erreur Firebase :", error);
-signalementsLayer.clearLayers();
-DEMO_SIGNALEMENTS.forEach(d => {
-const visual = getSignalementVisual(d);
-L.circle([Number(d.lat),Number(d.lng)],{
-color:visual.couleur,
-fillColor:visual.couleur,
-fillOpacity:.85,
-radius:150,
-weight:3
-})
-.addTo(signalementsLayer)
-.bindPopup(buildPopup(d, visual));
-})
-document.getElementById('legend-note').textContent = 'Mode démo : Firestore indisponible, données locales affichées.';
-updateIncidentAlert(DEMO_SIGNALEMENTS);
+                    hex.setStyle({
+                        color:"transparent",
+                        fillColor:"transparent",
+                        weight:0,
+                        fillOpacity:0
+                    });
 
-});
+                });
 
+                /* recolor */
+                currentSignalements.forEach(d => {
 
-/* géolocalisation */
+                    const visual = getSignalementVisual(d);
 
+                    const lat = Number(d.lat);
+                    const lng = Number(d.lng);
 
+                    const h3Index = h3.latLngToCell(lat, lng, 9);
 
-/* refresh leaflet responsive */
-setTimeout(()=>{
-carte.invalidateSize();
-},400);
+                    const hex = hexagonsMap.get(h3Index);
 
-window.addEventListener('resize', ()=>{
-carte.invalidateSize();
-});
+                    if(hex){
 
-carte.on('moveend', () => {
+                        hex.setStyle({
+                            color: visual.couleur,
+                            fillColor: visual.couleur,
+                            fillOpacity: 0.45,
+                            weight: 2
+                        });
 
-    generateHexGrid();
+                        hex.bindPopup(buildPopup(d, visual));
 
-    refreshHexagonColors();
+                    }
 
-});
+                });
+
+            }
 
 
-let userMarker = null;
+            onSnapshot(collection(db,'signalements'), (snap)=>{
 
-function afficherPositionUtilisateur(lat, lng, zoom = 16) {
+            signalementsLayer.clearLayers();
 
-    carte.setView([lat, lng], zoom);
+            let allSignalements = [];
+            snap.forEach(doc => {
+            const d = doc.data();
+            if(Number.isFinite(Number(d.lat)) && Number.isFinite(Number(d.lng))){
+            allSignalements.push(d);
+            }
+            });
 
-    if (userMarker) {
-        carte.removeLayer(userMarker);
-    }
+            const usingDemoData = allSignalements.length === 0;
+            if(usingDemoData){
+            allSignalements = DEMO_SIGNALEMENTS;
+            }
 
-    userMarker = L.marker([lat, lng], {
-        icon: createUserPositionIcon()
-    })
-    .addTo(carte)
-    .bindPopup('<span class="marker-popup">Vous êtes ici</span>')
-    .openPopup();
-}
+            const recentSignalements = allSignalements.filter(isRecent);
+            const useRecentOnly = recentSignalements.length >= MIN_RECENT_FOR_DEMO;
+            const signalementsToDisplay = useRecentOnly ? recentSignalements : allSignalements;
+            currentSignalements = signalementsToDisplay;
+            const legendNote = document.getElementById('legend-note');
+            legendNote.textContent = usingDemoData
+            ? 'Mode démo : données locales affichées car Firestore est vide.'
+            : useRecentOnly
+            ? 'Affichage des signalements des 2 dernières heures.'
+            : 'Mode démo : anciennes données incluses si peu de signalements récents.';
+            updateIncidentAlert(signalementsToDisplay);
 
-/* géolocalisation automatique */
-if ("geolocation" in navigator) {
+            signalementsToDisplay.forEach(d => {
 
-    navigator.geolocation.getCurrentPosition(pos => {
+            const visual = getSignalementVisual(d);
+            const lat = Number(d.lat);
+            const lng = Number(d.lng);
 
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
+            const h3Index = h3.latLngToCell(lat, lng, 9);
 
-        setTimeout(() => {
-            afficherPositionUtilisateur(lat, lng, 14);
-        }, 300);
+            const hex = hexagonsMap.get(h3Index);
 
-    }, error => {
+            if(hex){
 
-        console.error("Erreur géolocalisation :", error);
-        alert("Localisation impossible. Vérifie que tu as autorisé la position dans le navigateur.");
+                hex.setStyle({
+                    color: visual.couleur,
+                    fillColor: visual.couleur,
+                    fillOpacity: 0.45,
+                    weight: 2
+                });
 
-    }, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-    });
+                hex.bindPopup(buildPopup(d, visual));
 
-} else {
-    alert("La géolocalisation n'est pas supportée par ce navigateur.");
-}
+            }
 
-/* bouton recentrer */
-const locateBtn = document.getElementById("locate-btn");
+            });
 
-if (locateBtn) {
+            }, (error)=>{
 
-    locateBtn.addEventListener("click", () => {
 
-        navigator.geolocation.getCurrentPosition(pos => {
+            console.error("Erreur Firebase :", error);
+            signalementsLayer.clearLayers();
+            DEMO_SIGNALEMENTS.forEach(d => {
+            const visual = getSignalementVisual(d);
+            L.circle([Number(d.lat),Number(d.lng)],{
+            color:visual.couleur,
+            fillColor:visual.couleur,
+            fillOpacity:.85,
+            radius:150,
+            weight:3
+            })
+            .addTo(signalementsLayer)
+            .bindPopup(buildPopup(d, visual));
+            })
+            document.getElementById('legend-note').textContent = 'Mode démo : Firestore indisponible, données locales affichées.';
+            updateIncidentAlert(DEMO_SIGNALEMENTS);
 
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
+            });
 
-            afficherPositionUtilisateur(lat, lng, 16);
 
-        }, error => {
+            /* géolocalisation */
 
-            console.error("Erreur bouton localisation :", error);
-            alert("Impossible d'obtenir ta position. Vérifie l'autorisation de localisation.");
 
-        }, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        });
 
-    });
+            /* refresh leaflet responsive */
+            setTimeout(()=>{
+            carte.invalidateSize();
+            },400);
 
-}
+            window.addEventListener('resize', ()=>{
+            carte.invalidateSize();
+            });
 
-</script>
+            carte.on('moveend', () => {
 
-</body>
+                generateHexGrid();
+
+                refreshHexagonColors();
+
+            });
+
+
+            let userMarker = null;
+
+            function afficherPositionUtilisateur(lat, lng, zoom = 16) {
+
+                carte.setView([lat, lng], zoom);
+
+                if (userMarker) {
+                    carte.removeLayer(userMarker);
+                }
+
+                userMarker = L.marker([lat, lng], {
+                    icon: createUserPositionIcon()
+                })
+                .addTo(carte)
+                .bindPopup('<span class="marker-popup">Vous êtes ici</span>')
+                .openPopup();
+            }
+
+            /* géolocalisation automatique */
+            if ("geolocation" in navigator) {
+
+                navigator.geolocation.getCurrentPosition(pos => {
+
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+
+                    setTimeout(() => {
+                        afficherPositionUtilisateur(lat, lng, 14);
+                    }, 300);
+
+                }, error => {
+
+                    console.error("Erreur géolocalisation :", error);
+                    alert("Localisation impossible. Vérifie que tu as autorisé la position dans le navigateur.");
+
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+
+            } else {
+                alert("La géolocalisation n'est pas supportée par ce navigateur.");
+            }
+
+            /* bouton recentrer */
+            const locateBtn = document.getElementById("locate-btn");
+
+            if (locateBtn) {
+
+                locateBtn.addEventListener("click", () => {
+
+                    navigator.geolocation.getCurrentPosition(pos => {
+
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+
+                        afficherPositionUtilisateur(lat, lng, 16);
+
+                    }, error => {
+
+                        console.error("Erreur bouton localisation :", error);
+                        alert("Impossible d'obtenir ta position. Vérifie l'autorisation de localisation.");
+
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+
+                });
+
+            }
+
+        </script>
+
+    </body>
 </html>
